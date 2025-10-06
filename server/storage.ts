@@ -8,6 +8,7 @@ export interface IStorage {
   getAllLeads(): Promise<Lead[]>;
   createCalculation(calculation: InsertCalculation): Promise<Calculation>;
   getCalculation(id: string): Promise<Calculation | undefined>;
+  getAllCalculations(): Promise<Calculation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -33,6 +34,10 @@ export class DatabaseStorage implements IStorage {
   async getCalculation(id: string): Promise<Calculation | undefined> {
     const [calculation] = await db.select().from(calculations).where(eq(calculations.id, id));
     return calculation;
+  }
+
+  async getAllCalculations(): Promise<Calculation[]> {
+    return await db.select().from(calculations);
   }
 }
 
