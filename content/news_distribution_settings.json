@@ -1,0 +1,95 @@
+{
+  "platforms": {
+    "telegram": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "vk": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "dzen": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "tenchat": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "vc": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "habr": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "youtube": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "rutube": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "ok": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "yandex_business": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "google_business": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "2gis": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "threads": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "linkedin": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    },
+    "email_digest": {
+      "enabled": false,
+      "profileUrl": null,
+      "webhookTokenPlaceholder": null,
+      "updatedAt": null
+    }
+  },
+  "lastUpdated": null
+}

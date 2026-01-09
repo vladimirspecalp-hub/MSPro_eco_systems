@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.DS_Store
+.gemini
+attached_assets
+mspro-website.zip
+.config
+.replit

@@ -1,0 +1,2 @@
+// TODO: Supabase service
+export {};

@@ -1,0 +1,669 @@
+
+> rest-express@1.0.0 dev
+> cross-env NODE_ENV=development tsx server/index.ts
+
+10:59:49 AM [express] serving on port 5000
+Error: [31m  Failed to scan for dependencies from entries:
+  C:/Users/1/.gemini/antigravity/scratch/client/index.html
+
+  [39m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/components/AdaptiveHero.tsx:2:9:
+[37m      2 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/components/Header.tsx:2:9:
+[37m      2 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/components/Hero.tsx:1:9:
+[37m      1 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/components/ThemeToggle.tsx:2:9:
+[37m      2 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/modules/leads/form.tsx:2:9:
+[37m      2 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Input.tsx" for import "Input"[0m
+
+    client/src/modules/leads/form.tsx:3:9:
+[37m      3 │ import { [32mInput[37m } from "@/components/ui/input";
+        ╵          [32m~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/modules/newsDistribution/PlatformGrid.tsx:4:9:
+[37m      4 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Input.tsx" for import "Input"[0m
+
+    client/src/modules/newsDistribution/ui.tsx:2:9:
+[37m      2 │ import { [32mInput[37m } from "@/components/ui/input";
+        ╵          [32m~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/Calculator.tsx:5:9:
+[37m      5 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/Calculator.tsx:6:9:
+[37m      6 │ import { [32mCard[37m, CardHeader, CardTitle, CardDescription, CardContent ...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/Calculator.tsx:6:15:
+[37m      6 │ import { Card, [32mCardHeader[37m, CardTitle, CardDescription, CardContent ...
+        ╵                [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/Calculator.tsx:6:27:
+[37m      6 │ import { Card, CardHeader, [32mCardTitle[37m, CardDescription, CardContent ...
+        ╵                            [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardDescription"[0m
+
+    client/src/pages/Calculator.tsx:6:38:
+[37m      6 │ ..., CardHeader, CardTitle, [32mCardDescription[37m, CardContent } from "@/...
+        ╵                             [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/Calculator.tsx:6:55:
+[37m      6 │ ...ardTitle, CardDescription, [32mCardContent[37m } from "@/components/ui/c...
+        ╵                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "Form"[0m
+
+    client/src/pages/Calculator.tsx:8:2:
+[37m      8 │   [32mForm[37m,
+        ╵   [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormControl"[0m
+
+    client/src/pages/Calculator.tsx:9:2:
+[37m      9 │   [32mFormControl[37m,
+        ╵   [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormField"[0m
+
+    client/src/pages/Calculator.tsx:10:2:
+[37m      10 │   [32mFormField[37m,
+         ╵   [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormItem"[0m
+
+    client/src/pages/Calculator.tsx:11:2:
+[37m      11 │   [32mFormItem[37m,
+         ╵   [32m~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormLabel"[0m
+
+    client/src/pages/Calculator.tsx:12:2:
+[37m      12 │   [32mFormLabel[37m,
+         ╵   [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormMessage"[0m
+
+    client/src/pages/Calculator.tsx:13:2:
+[37m      13 │   [32mFormMessage[37m,
+         ╵   [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Input.tsx" for import "Input"[0m
+
+    client/src/pages/Calculator.tsx:15:9:
+[37m      15 │ import { [32mInput[37m } from "@/components/ui/input";
+         ╵          [32m~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/Contacts.tsx:6:9:
+[37m      6 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "Form"[0m
+
+    client/src/pages/Contacts.tsx:8:2:
+[37m      8 │   [32mForm[37m,
+        ╵   [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormControl"[0m
+
+    client/src/pages/Contacts.tsx:9:2:
+[37m      9 │   [32mFormControl[37m,
+        ╵   [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormField"[0m
+
+    client/src/pages/Contacts.tsx:10:2:
+[37m      10 │   [32mFormField[37m,
+         ╵   [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormItem"[0m
+
+    client/src/pages/Contacts.tsx:11:2:
+[37m      11 │   [32mFormItem[37m,
+         ╵   [32m~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormLabel"[0m
+
+    client/src/pages/Contacts.tsx:12:2:
+[37m      12 │   [32mFormLabel[37m,
+         ╵   [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Form.tsx" for import "FormMessage"[0m
+
+    client/src/pages/Contacts.tsx:13:2:
+[37m      13 │   [32mFormMessage[37m,
+         ╵   [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Input.tsx" for import "Input"[0m
+
+    client/src/pages/Contacts.tsx:15:9:
+[37m      15 │ import { [32mInput[37m } from "@/components/ui/input";
+         ╵          [32m~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/Contacts.tsx:25:9:
+[37m      25 │ import { [32mCard[37m, CardHeader, CardTitle, CardDescription, CardContent...
+         ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/Contacts.tsx:25:15:
+[37m      25 │ import { Card, [32mCardHeader[37m, CardTitle, CardDescription, CardContent...
+         ╵                [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/Contacts.tsx:25:27:
+[37m      25 │ import { Card, CardHeader, [32mCardTitle[37m, CardDescription, CardContent...
+         ╵                            [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardDescription"[0m
+
+    client/src/pages/Contacts.tsx:25:38:
+[37m      25 │ ... CardHeader, CardTitle, [32mCardDescription[37m, CardContent } from "@/...
+         ╵                            [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/Contacts.tsx:25:55:
+[37m      25 │ ...rdTitle, CardDescription, [32mCardContent[37m } from "@/components/ui/c...
+         ╵                              [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/Documents.tsx:3:9:
+[37m      3 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/Documents.tsx:4:9:
+[37m      4 │ import { [32mCard[37m, CardContent, CardDescription, CardHeader, CardTitle ...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/Documents.tsx:4:15:
+[37m      4 │ import { Card, [32mCardContent[37m, CardDescription, CardHeader, CardTitle ...
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardDescription"[0m
+
+    client/src/pages/Documents.tsx:4:28:
+[37m      4 │ import { Card, CardContent, [32mCardDescription[37m, CardHeader, CardTitle ...
+        ╵                             [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/Documents.tsx:4:45:
+[37m      4 │ ...dContent, CardDescription, [32mCardHeader[37m, CardTitle } from "@/compo...
+        ╵                               [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/Documents.tsx:4:57:
+[37m      4 │ ...ardDescription, CardHeader, [32mCardTitle[37m } from "@/components/ui/ca...
+        ╵                                [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/Home.tsx:3:9:
+[37m      3 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/Home.tsx:4:9:
+[37m      4 │ import { [32mCard[37m, CardDescription, CardHeader, CardTitle } from "@/com...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardDescription"[0m
+
+    client/src/pages/Home.tsx:4:15:
+[37m      4 │ import { Card, [32mCardDescription[37m, CardHeader, CardTitle } from "@/com...
+        ╵                [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/Home.tsx:4:32:
+[37m      4 │ ...t { Card, CardDescription, [32mCardHeader[37m, CardTitle } from "@/compo...
+        ╵                               [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/Home.tsx:4:44:
+[37m      4 │ ...ardDescription, CardHeader, [32mCardTitle[37m } from "@/components/ui/ca...
+        ╵                                [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/MSPROQuad.tsx:2:9:
+[37m      2 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/MSPROQuad.tsx:3:9:
+[37m      3 │ import { [32mCard[37m, CardHeader, CardTitle, CardContent } from "@/compone...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/MSPROQuad.tsx:3:15:
+[37m      3 │ import { Card, [32mCardHeader[37m, CardTitle, CardContent } from "@/compone...
+        ╵                [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/MSPROQuad.tsx:3:27:
+[37m      3 │ import { Card, CardHeader, [32mCardTitle[37m, CardContent } from "@/compone...
+        ╵                            [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/MSPROQuad.tsx:3:38:
+[37m      3 │ ...rd, CardHeader, CardTitle, [32mCardContent[37m } from "@/components/ui/c...
+        ╵                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/News.tsx:7:9:
+[37m      7 │ import { [32mCard[37m, CardContent, CardHeader, CardTitle } from "@/compone...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/News.tsx:7:15:
+[37m      7 │ import { Card, [32mCardContent[37m, CardHeader, CardTitle } from "@/compone...
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/News.tsx:7:28:
+[37m      7 │ import { Card, CardContent, [32mCardHeader[37m, CardTitle } from "@/compone...
+        ╵                             [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/News.tsx:7:40:
+[37m      7 │ ...d, CardContent, CardHeader, [32mCardTitle[37m } from "@/components/ui/ca...
+        ╵                                [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/NewsArticle.tsx:7:9:
+[37m      7 │ import { [32mCard[37m, CardContent } from "@/components/ui/card";
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/NewsArticle.tsx:7:15:
+[37m      7 │ import { Card, [32mCardContent[37m } from "@/components/ui/card";
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/NewsArticle.tsx:9:9:
+[37m      9 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/SEOPage.tsx:3:9:
+[37m      3 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/SEOPage.tsx:4:9:
+[37m      4 │ import { [32mCard[37m, CardHeader, CardTitle, CardContent, CardDescription ...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/SEOPage.tsx:4:15:
+[37m      4 │ import { Card, [32mCardHeader[37m, CardTitle, CardContent, CardDescription ...
+        ╵                [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/SEOPage.tsx:4:27:
+[37m      4 │ import { Card, CardHeader, [32mCardTitle[37m, CardContent, CardDescription ...
+        ╵                            [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/SEOPage.tsx:4:38:
+[37m      4 │ ...rd, CardHeader, CardTitle, [32mCardContent[37m, CardDescription } from "...
+        ╵                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardDescription"[0m
+
+    client/src/pages/SEOPage.tsx:4:51:
+[37m      4 │ ... CardTitle, CardContent, [32mCardDescription[37m } from "@/components/ui...
+        ╵                             [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/admin/NewsDistribution.tsx:8:9:
+[37m      8 │ import { [32mCard[37m, CardContent, CardHeader, CardTitle, CardDescription ...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/admin/NewsDistribution.tsx:8:15:
+[37m      8 │ import { Card, [32mCardContent[37m, CardHeader, CardTitle, CardDescription ...
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/admin/NewsDistribution.tsx:8:28:
+[37m      8 │ import { Card, CardContent, [32mCardHeader[37m, CardTitle, CardDescription ...
+        ╵                             [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/admin/NewsDistribution.tsx:8:40:
+[37m      8 │ ...d, CardContent, CardHeader, [32mCardTitle[37m, CardDescription } from "@...
+        ╵                                [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardDescription"[0m
+
+    client/src/pages/admin/NewsDistribution.tsx:8:51:
+[37m      8 │ ..., CardHeader, CardTitle, [32mCardDescription[37m } from "@/components/ui...
+        ╵                             [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/admin/NewsDistribution.tsx:9:9:
+[37m      9 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Input.tsx" for import "Input"[0m
+
+    client/src/pages/admin/NewsDistribution.tsx:10:9:
+[37m      10 │ import { [32mInput[37m } from "@/components/ui/input";
+         ╵          [32m~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/not-found.tsx:1:9:
+[37m      1 │ import { [32mCard[37m, CardContent } from "@/components/ui/card";
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/not-found.tsx:1:15:
+[37m      1 │ import { Card, [32mCardContent[37m } from "@/components/ui/card";
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/services/AnticorrosionAtHeight.tsx:3:9:
+[37m      3 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/services/AnticorrosionAtHeight.tsx:4:9:
+[37m      4 │ import { [32mCard[37m, CardContent, CardHeader, CardTitle } from "@/compone...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/services/AnticorrosionAtHeight.tsx:4:15:
+[37m      4 │ import { Card, [32mCardContent[37m, CardHeader, CardTitle } from "@/compone...
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/services/AnticorrosionAtHeight.tsx:4:28:
+[37m      4 │ import { Card, CardContent, [32mCardHeader[37m, CardTitle } from "@/compone...
+        ╵                             [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/services/AnticorrosionAtHeight.tsx:4:40:
+[37m      4 │ ...d, CardContent, CardHeader, [32mCardTitle[37m } from "@/components/ui/ca...
+        ╵                                [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/services/FireproofingAtHeight.tsx:3:9:
+[37m      3 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/services/FireproofingAtHeight.tsx:4:9:
+[37m      4 │ import { [32mCard[37m, CardContent, CardHeader, CardTitle } from "@/compone...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/services/FireproofingAtHeight.tsx:4:15:
+[37m      4 │ import { Card, [32mCardContent[37m, CardHeader, CardTitle } from "@/compone...
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/services/FireproofingAtHeight.tsx:4:28:
+[37m      4 │ import { Card, CardContent, [32mCardHeader[37m, CardTitle } from "@/compone...
+        ╵                             [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/services/FireproofingAtHeight.tsx:4:40:
+[37m      4 │ ...d, CardContent, CardHeader, [32mCardTitle[37m } from "@/components/ui/ca...
+        ╵                                [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/services/RopeAccess.tsx:3:9:
+[37m      3 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/services/RopeAccess.tsx:4:9:
+[37m      4 │ import { [32mCard[37m, CardContent, CardDescription, CardHeader, CardTitle ...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/services/RopeAccess.tsx:4:15:
+[37m      4 │ import { Card, [32mCardContent[37m, CardDescription, CardHeader, CardTitle ...
+        ╵                [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardDescription"[0m
+
+    client/src/pages/services/RopeAccess.tsx:4:28:
+[37m      4 │ import { Card, CardContent, [32mCardDescription[37m, CardHeader, CardTitle ...
+        ╵                             [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/services/RopeAccess.tsx:4:45:
+[37m      4 │ ...dContent, CardDescription, [32mCardHeader[37m, CardTitle } from "@/compo...
+        ╵                               [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/services/RopeAccess.tsx:4:57:
+[37m      4 │ ...ardDescription, CardHeader, [32mCardTitle[37m } from "@/components/ui/ca...
+        ╵                                [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Button.tsx" for import "Button"[0m
+
+    client/src/pages/services/[slug].tsx:3:9:
+[37m      3 │ import { [32mButton[37m } from "@/components/ui/button";
+        ╵          [32m~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "Card"[0m
+
+    client/src/pages/services/[slug].tsx:4:9:
+[37m      4 │ import { [32mCard[37m, CardHeader, CardTitle, CardContent } from "@/compone...
+        ╵          [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardHeader"[0m
+
+    client/src/pages/services/[slug].tsx:4:15:
+[37m      4 │ import { Card, [32mCardHeader[37m, CardTitle, CardContent } from "@/compone...
+        ╵                [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardTitle"[0m
+
+    client/src/pages/services/[slug].tsx:4:27:
+[37m      4 │ import { Card, CardHeader, [32mCardTitle[37m, CardContent } from "@/compone...
+        ╵                            [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "client/src/components/ui/Card.tsx" for import "CardContent"[0m
+
+    client/src/pages/services/[slug].tsx:4:38:
+[37m      4 │ ...rd, CardHeader, CardTitle, [32mCardContent[37m } from "@/components/ui/c...
+        ╵                               [32m~~~~~~~~~~~[0m
+
+
+    at failureErrorWithLog (C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:1472:15)
+    at C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:945:25
+    at runOnEndCallbacks (C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:1315:45)
+    at buildResponseToResult (C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:943:7)
+    at C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:955:9
+    at new Promise (<anonymous>)
+    at requestCallbacks.on-end (C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:954:54)
+    at handleRequest (C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:647:17)
+    at handleIncomingPacket (C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:672:7)
+    at Socket.readFromStdout (C:\Users\1\.gemini\antigravity\scratch\node_modules\vite\node_modules\esbuild\lib\main.js:600:7)

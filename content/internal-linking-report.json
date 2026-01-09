@@ -1,0 +1,91 @@
+{
+  "reportDate": "2025-01-05",
+  "summary": {
+    "totalSEOPages": 163,
+    "duplicateURLsFound": 0,
+    "duplicatesFixed": 1,
+    "canonicalTagsImplemented": true,
+    "internalLinkingEnabled": true,
+    "averageInternalLinksPerPage": 117.4,
+    "maxInternalLinksOnPage": 139,
+    "minInternalLinksOnPage": 0
+  },
+  "canonicalTags": {
+    "implemented": true,
+    "format": "https://ms-pro.ru/{slug}",
+    "description": "Каждая SEO-страница теперь содержит canonical тег для предотвращения дублирования контента"
+  },
+  "duplicatesFixed": [
+    {
+      "slug": "germetizaciya-shvov-na-vysote",
+      "action": "removed duplicate entry",
+      "kept": "Москва и область version (более детальное описание)",
+      "removed": "Россия version (дублирующая запись)"
+    }
+  ],
+  "internalLinking": {
+    "mechanism": "keyword-based matching",
+    "displayLimit": 6,
+    "description": "На каждой SEO-странице отображается секция 'Похожие услуги' с автоматически подобранными релевантными страницами на основе совпадающих ключевых слов",
+    "topConnectedPages": [
+      {
+        "slug": "demontazh-metallokonstrukcij",
+        "title": "Демонтаж металлоконструкций — безопасные высотные работы MSPRO",
+        "internalLinks": 139
+      },
+      {
+        "slug": "uslugi-promyshlennogo-alpinizma-moskva",
+        "title": "Услуги промышленного альпинизма в Москве — MSPRO",
+        "internalLinks": 138
+      },
+      {
+        "slug": "uslugi-promyshlennogo-alpinizma-spb",
+        "title": "Услуги промышленного альпинизма в СПб — MSPRO",
+        "internalLinks": 138
+      }
+    ],
+    "isolatedPages": [
+      {
+        "slug": "montazh-reklamy-na-vysote",
+        "title": "Монтаж рекламы на высоте — установка вывесок MSPRO",
+        "internalLinks": 0,
+        "reason": "Уникальные ключевые слова без совпадений с другими страницами"
+      },
+      {
+        "slug": "uteplenie-fasada",
+        "title": "Утепление фасада — высотные работы MSPRO",
+        "internalLinks": 0,
+        "reason": "Уникальные ключевые слова без совпадений с другими страницами"
+      },
+      {
+        "slug": "remont-krovli-na-vysote",
+        "title": "Ремонт кровли на высоте — кровельные работы MSPRO",
+        "internalLinks": 0,
+        "reason": "Уникальные ключевые слова без совпадений с другими страницами"
+      }
+    ]
+  },
+  "recommendations": {
+    "isolatedPages": "Рекомендуется добавить общие ключевые слова (например, 'высотные работы', 'MSPRO', 'промышленный альпинизм') для страниц с 0 внутренними ссылками, чтобы улучшить внутреннюю перелинковку",
+    "keywordOptimization": "Страницы с наибольшим количеством внутренних ссылок используют популярные ключевые слова 'высотные работы', 'MSPRO', 'промышленный альпинизм' — эти термины создают сильную внутреннюю структуру ссылок",
+    "seoImpact": "Внутренние ссылки улучшают навигацию пользователей, увеличивают время на сайте и помогают поисковым системам понимать структуру и иерархию контента"
+  },
+  "technicalImplementation": {
+    "canonicalTags": {
+      "location": "client/src/pages/SEOPage.tsx",
+      "implementation": "Dynamic canonical link tag added via useEffect hook",
+      "cleanup": "Canonical tag removed on component unmount to prevent conflicts"
+    },
+    "internalLinks": {
+      "location": "client/src/pages/SEOPage.tsx",
+      "algorithm": "Keyword matching algorithm filters pages with overlapping keywords",
+      "display": "Related services section with 6 cards in responsive grid layout",
+      "userExperience": "Hover and active states on cards for better interactivity"
+    }
+  },
+  "filesUpdated": [
+    "content/seo_core.json - removed duplicate entry",
+    "public/sitemap.xml - removed duplicate URL",
+    "client/src/pages/SEOPage.tsx - added canonical tags and internal linking section"
+  ]
+}
