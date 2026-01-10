@@ -150,6 +150,10 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       message: insertLead.message ?? null,
       source: insertLead.source ?? null,
+      city: insertLead.city ?? null,
+      systemType: insertLead.systemType ?? null,
+      calculatedPrice: insertLead.calculatedPrice ? insertLead.calculatedPrice.toString() : null,
+      details: insertLead.details ?? null,
     };
     this.leads.set(id, lead);
     return lead;
@@ -203,4 +207,4 @@ export class MemStorage implements IStorage {
   async updateOutboxEntry(id: string, data: Partial<InsertNewsOutbox>): Promise<NewsOutbox | undefined> { return undefined; }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

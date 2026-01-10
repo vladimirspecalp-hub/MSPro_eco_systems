@@ -50,6 +50,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/leads", async (req, res) => {
     try {
       const validatedData = insertLeadSchema.parse(req.body);
+
+      // Geo-Location detection
+      if (!validatedData.city) {
+        const forwardedFor = req.headers['x-forwarded-for'] as string;
+        let ip = forwardedFor ? forwardedFor.split(',')[0].trim() : req.socket.remoteAddress;
+
+        if (ip && ip !== '::1' && ip !== '127.0.0.1') {
+          try {
+            // Using ip-api.com (free for non-commercial use)
+            // Note: In production with high load, consider a local DB or paid service
+            const response = await fetch(`http://ip-api.com/json/${ip}?lang=ru`);
+            const data = await response.json();
+            if (data.status === 'success' && data.city) {
+              validatedData.city = data.city;
+            }
+          } catch (e) {
+            console.error('Failed to resolve IP to city:', e);
+          }
+        }
+      }
+
       const lead = await storage.createLead(validatedData);
       res.json(lead);
     } catch (error: any) {
