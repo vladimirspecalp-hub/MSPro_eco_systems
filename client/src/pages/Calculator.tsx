@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calculator as CalculatorIcon, ArrowRight } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 const calculatorSchema = z.object({
   serviceType: z.string().min(1, "Выберите тип услуги"),
@@ -50,6 +50,7 @@ interface CalculationResult {
 
 export default function Calculator() {
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const [, setLocation] = useLocation();
 
   const form = useForm<CalculatorFormData>({
     resolver: zodResolver(calculatorSchema),
@@ -114,6 +115,17 @@ export default function Calculator() {
       currency: "RUB",
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const handleRequestQuote = () => {
+    if (result) {
+      const formData = form.getValues();
+      sessionStorage.setItem("calculatorData", JSON.stringify({
+        ...formData,
+        calculatedPrice: result.totalCost,
+      }));
+      setLocation("/contacts");
+    }
   };
 
   return (
@@ -292,12 +304,14 @@ export default function Calculator() {
                     <p className="text-sm text-muted-foreground mb-4">
                       Оставьте заявку и наш инженер произведет детальный расчет с учетом всех особенностей объекта
                     </p>
-                    <Link href="/contacts">
-                      <Button className="w-full" data-testid="button-request-quote">
-                        Получить коммерческое предложение
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <Button
+                      className="w-full"
+                      onClick={handleRequestQuote}
+                      data-testid="button-request-quote"
+                    >
+                      Получить коммерческое предложение
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </CardContent>
                 </Card>
               </>

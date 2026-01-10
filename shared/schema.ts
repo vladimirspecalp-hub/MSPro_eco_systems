@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, decimal, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -11,6 +11,10 @@ export const leads = pgTable("leads", {
   serviceType: text("service_type").notNull(),
   message: text("message"),
   source: text("source"),
+  city: text("city"),
+  systemType: text("system_type"),
+  calculatedPrice: decimal("calculated_price"),
+  details: jsonb("details"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -34,6 +38,10 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   email: z.string().email("Введите корректный email").or(z.literal("")).default(""),
   name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
   message: z.string().optional(),
+  city: z.string().optional(),
+  systemType: z.string().optional(),
+  calculatedPrice: z.number().or(z.string()).optional(),
+  details: z.any().optional(),
   serviceType: z.enum([
     "chimney-painting",
     "anti-corrosion",
