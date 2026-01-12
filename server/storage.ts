@@ -7,6 +7,11 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
@@ -34,6 +39,25 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async createLead(insertLead: InsertLead): Promise<Lead> {
+    // Fallback: Try Supabase Client (PostgREST) first to satisfy any triggers requiring context
+    if (supabaseUrl && supabaseKey) {
+      const { data, error } = await supabase
+        .from('leads')
+        .insert({
+          ...insertLead,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (!error && data) {
+        // Map response to match Lead type if necessary
+        return data as Lead;
+      }
+      console.error("Supabase Client Insert Failed:", error);
+    }
+
+    // Standard Drizzle Fallback (may fail if trigger requires context)
     const [lead] = await db.insert(leads).values(insertLead).returning();
     return lead;
   }
