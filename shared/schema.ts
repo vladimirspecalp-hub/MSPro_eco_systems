@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, decimal, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, decimal, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,7 +15,18 @@ export const leads = pgTable("leads", {
   systemType: text("system_type"),
   calculatedPrice: decimal("calculated_price"),
   details: jsonb("details"),
+  status: text("status").default("new").notNull(), // new, in_progress, archive
+  notes: text("notes"),
+  tags: text("tags").array(),
+  n8nSynced: boolean("n8n_synced").default(false),
+  externalSupabaseSynced: boolean("external_supabase_synced").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const settings = pgTable("settings", {
+  key: varchar("key").primaryKey(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const calculations = pgTable("calculations", {
@@ -33,6 +44,9 @@ export const calculations = pgTable("calculations", {
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
+  status: true,
+  n8nSynced: true,
+  externalSupabaseSynced: true,
 }).extend({
   phone: z.string().min(10, "Телефон должен содержать минимум 10 цифр"),
   email: z.string().email("Введите корректный email").or(z.literal("")).default(""),
@@ -42,6 +56,8 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   systemType: z.string().optional(),
   calculatedPrice: z.number().or(z.string()).optional(),
   details: z.any().optional(),
+  notes: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   serviceType: z.enum([
     "chimney-painting",
     "anti-corrosion",
@@ -54,6 +70,8 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   ]).or(z.string()),
 });
 
+export const insertSettingsSchema = createInsertSchema(settings);
+
 export const insertCalculationSchema = createInsertSchema(calculations).omit({
   id: true,
   createdAt: true,
@@ -63,6 +81,8 @@ export const insertCalculationSchema = createInsertSchema(calculations).omit({
 
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type Settings = typeof settings.$inferSelect;
 export type InsertCalculation = z.infer<typeof insertCalculationSchema>;
 export type Calculation = typeof calculations.$inferSelect;
 

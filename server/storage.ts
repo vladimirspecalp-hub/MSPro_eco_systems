@@ -3,20 +3,22 @@ import {
   type Calculation, type InsertCalculation,
   type NewsArticle, type InsertNewsArticle,
   type NewsOutbox, type InsertNewsOutbox,
-  leads, calculations, newsArticles, newsOutbox
+  type Settings, type InsertSettings,
+  leads, calculations, newsArticles, newsOutbox, settings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
   getLead(id: string): Promise<Lead | undefined>;
   getAllLeads(): Promise<Lead[]>;
+  updateLead(id: string, data: Partial<Lead>): Promise<Lead | undefined>;
+  deleteLead(id: string): Promise<boolean>;
+
+  getSettings(key: string): Promise<Settings | undefined>;
+  updateSetting(key: string, value: string): Promise<Settings>;
+
   createCalculation(calculation: InsertCalculation): Promise<Calculation>;
   getCalculation(id: string): Promise<Calculation | undefined>;
   getAllCalculations(): Promise<Calculation[]>;
@@ -39,25 +41,6 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async createLead(insertLead: InsertLead): Promise<Lead> {
-    // Fallback: Try Supabase Client (PostgREST) first to satisfy any triggers requiring context
-    if (supabaseUrl && supabaseKey) {
-      const { data, error } = await supabase
-        .from('leads')
-        .insert({
-          ...insertLead,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (!error && data) {
-        // Map response to match Lead type if necessary
-        return data as Lead;
-      }
-      console.error("Supabase Client Insert Failed:", error);
-    }
-
-    // Standard Drizzle Fallback (may fail if trigger requires context)
     const [lead] = await db.insert(leads).values(insertLead).returning();
     return lead;
   }
@@ -68,7 +51,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllLeads(): Promise<Lead[]> {
-    return await db.select().from(leads);
+    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  }
+
+  async updateLead(id: string, data: Partial<Lead>): Promise<Lead | undefined> {
+    const [updated] = await db.update(leads)
+      .set(data)
+      .where(eq(leads.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteLead(id: string): Promise<boolean> {
+    await db.delete(leads).where(eq(leads.id, id));
+    return true;
+  }
+
+  async getSettings(key: string): Promise<Settings | undefined> {
+    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
+    return setting;
+  }
+
+  async updateSetting(key: string, value: string): Promise<Settings> {
+    const [setting] = await db.insert(settings)
+      .values({ key, value })
+      .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } })
+      .returning();
+    return setting;
   }
 
   async createCalculation(insertCalculation: InsertCalculation): Promise<Calculation> {
@@ -178,6 +187,11 @@ export class MemStorage implements IStorage {
       systemType: insertLead.systemType ?? null,
       calculatedPrice: insertLead.calculatedPrice ? insertLead.calculatedPrice.toString() : null,
       details: insertLead.details ?? null,
+      status: "new",
+      notes: null,
+      tags: null,
+      n8nSynced: false,
+      externalSupabaseSynced: false,
     };
     this.leads.set(id, lead);
     return lead;
@@ -190,6 +204,21 @@ export class MemStorage implements IStorage {
   async getAllLeads(): Promise<Lead[]> {
     return Array.from(this.leads.values());
   }
+
+  async updateLead(id: string, data: Partial<Lead>): Promise<Lead | undefined> {
+    const lead = this.leads.get(id);
+    if (!lead) return undefined;
+    const updated = { ...lead, ...data };
+    this.leads.set(id, updated);
+    return updated;
+  }
+
+  async deleteLead(id: string): Promise<boolean> {
+    return this.leads.delete(id);
+  }
+
+  async getSettings(key: string): Promise<Settings | undefined> { return undefined; }
+  async updateSetting(key: string, value: string): Promise<Settings> { throw new Error("Method not implemented."); }
 
   async createCalculation(insertCalculation: InsertCalculation): Promise<Calculation> {
     const id = (this.calculations.size + 1).toString();

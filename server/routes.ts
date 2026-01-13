@@ -46,6 +46,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // News API v1.0
   app.use("/api/news", newsApiRouter);
 
+  // Admin Routes
+  app.post("/api/admin/login", (req, res) => {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword || password !== adminPassword) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    // Set a simple session cookie or just return success for client-side state
+    // For simplicity in this "Offline-First" model, we'll return a success flag
+    // and let the client manage the "authenticated" state or send password with requests.
+    // Ideally, use a secure session/JWT. Here we will use a simple header check middleware for other admin routes.
+    res.json({ success: true });
+  });
+
+  const adminAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const authHeader = req.headers.authorization;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword || authHeader !== `Bearer ${adminPassword}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    next();
+  };
+
+  app.get("/api/admin/leads", adminAuth, async (req, res) => {
+    try {
+      const leads = await storage.getAllLeads();
+      res.json(leads);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/leads/:id", adminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updated = await storage.updateLead(id, req.body);
+      if (!updated) return res.status(404).json({ error: "Lead not found" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/leads/:id", adminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteLead(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/settings", adminAuth, async (req, res) => {
+    try {
+      const n8nUrl = await storage.getSettings("n8n_webhook_url");
+      const supabaseUrl = await storage.getSettings("external_supabase_url");
+      res.json({
+        n8n_webhook_url: n8nUrl?.value || "",
+        external_supabase_url: supabaseUrl?.value || "",
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/settings", adminAuth, async (req, res) => {
+    try {
+      const { n8n_webhook_url, external_supabase_url } = req.body;
+      if (n8n_webhook_url !== undefined) await storage.updateSetting("n8n_webhook_url", n8n_webhook_url);
+      if (external_supabase_url !== undefined) await storage.updateSetting("external_supabase_url", external_supabase_url);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Lead routes
   app.post("/api/leads", async (req, res) => {
     try {
@@ -59,7 +139,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (ip && ip !== '::1' && ip !== '127.0.0.1') {
           try {
             // Using ip-api.com (free for non-commercial use)
-            // Note: In production with high load, consider a local DB or paid service
             const response = await fetch(`http://ip-api.com/json/${ip}?lang=ru`);
             const data = await response.json();
             if (data.status === 'success' && data.city) {
@@ -71,7 +150,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // 1. Local Persistence (Critical)
       const lead = await storage.createLead(validatedData);
+
+      // 2. Background Sync (Fire & Forget)
+      (async () => {
+        try {
+          // n8n Webhook
+          const n8nSetting = await storage.getSettings("n8n_webhook_url");
+          const n8nUrl = n8nSetting?.value || process.env.N8N_WEBHOOK_URL;
+
+          if (n8nUrl) {
+            const response = await fetch(n8nUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(lead),
+            });
+
+            if (response.ok) {
+              await storage.updateLead(lead.id, { n8nSynced: true });
+            }
+          }
+
+          // External Supabase Sync (Future Implementation or Configured via Settings)
+          const extSupabaseUrl = await storage.getSettings("external_supabase_url");
+          if (extSupabaseUrl?.value) {
+            // TODO: Implement external sync logic if keys are provided
+            // For now, we just mark as not synced
+          }
+
+        } catch (err) {
+          console.error("Background sync failed:", err);
+        }
+      })();
+
       res.json(lead);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
