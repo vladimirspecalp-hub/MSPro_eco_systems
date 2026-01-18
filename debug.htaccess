@@ -1,0 +1,7 @@
+PassengerEnabled on
+PassengerAppRoot /home/m/mspro/mspro-ltd.ru/public_html
+PassengerAppType node
+PassengerStartupFile dist/index.js
+PassengerNodejs /home/m/mspro/.nvm/versions/node/v24.13.0/bin/node
+PassengerFriendlyErrorPages on
+PassengerAppLogFile /home/m/mspro/mspro-ltd.ru/public_html/passenger_error.log

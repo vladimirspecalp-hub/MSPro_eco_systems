@@ -5,7 +5,7 @@ import type { Lead, Calculation } from '@shared/schema';
 export async function syncLeadsToSupabase(): Promise<void> {
   try {
     const leads = await storage.getAllLeads();
-    
+
     if (leads.length === 0) {
       console.log('No leads to sync');
       return;
@@ -30,7 +30,7 @@ export async function syncLeadsToSupabase(): Promise<void> {
 export async function syncCalculationsToSupabase(): Promise<void> {
   try {
     const calculations = await storage.getAllCalculations();
-    
+
     if (calculations.length === 0) {
       console.log('No calculations to sync');
       return;
@@ -64,7 +64,13 @@ export async function syncFromSupabase(): Promise<void> {
       console.error('Failed to fetch leads from Supabase:', leadsError);
     } else if (leads && leads.length > 0) {
       for (const lead of leads as Lead[]) {
-        await storage.createLead(lead);
+        const { id, createdAt, ...insertData } = lead;
+        await storage.createLead({
+          ...insertData,
+          message: insertData.message ?? undefined,
+          source: insertData.source ?? undefined,
+          email: insertData.email ?? "", // Handle null email if schema allows it or default
+        });
       }
       console.log(`✅ Synced ${leads.length} leads from Supabase`);
     }

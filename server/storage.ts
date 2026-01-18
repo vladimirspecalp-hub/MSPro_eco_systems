@@ -7,6 +7,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
@@ -34,8 +35,9 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async createLead(insertLead: InsertLead): Promise<Lead> {
-    const [lead] = await db.insert(leads).values(insertLead).returning();
-    return lead;
+    const id = randomUUID();
+    await db.insert(leads).values({ ...insertLead, id });
+    return (await this.getLead(id))!;
   }
 
   async getLead(id: string): Promise<Lead | undefined> {
@@ -48,8 +50,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCalculation(insertCalculation: InsertCalculation): Promise<Calculation> {
-    const [calculation] = await db.insert(calculations).values(insertCalculation).returning();
-    return calculation;
+    const id = randomUUID();
+    await db.insert(calculations).values({ ...insertCalculation, id });
+    return (await this.getCalculation(id))!;
   }
 
   async getCalculation(id: string): Promise<Calculation | undefined> {
@@ -63,8 +66,15 @@ export class DatabaseStorage implements IStorage {
 
   // News Articles CRUD
   async createNewsArticle(article: InsertNewsArticle): Promise<NewsArticle> {
-    const [created] = await db.insert(newsArticles).values(article).returning();
-    return created;
+    const id = randomUUID();
+    // Cast tags/keywords to any to satisfy Drizzle JSON type check against Zod array
+    await db.insert(newsArticles).values({
+      ...article,
+      id,
+      tags: article.tags as any,
+      metaKeywords: article.metaKeywords as any
+    });
+    return (await this.getNewsArticle(id))!;
   }
 
   async getNewsArticle(id: string): Promise<NewsArticle | undefined> {
@@ -87,22 +97,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateNewsArticle(id: string, data: Partial<InsertNewsArticle>): Promise<NewsArticle | undefined> {
-    const [updated] = await db.update(newsArticles)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(newsArticles.id, id))
-      .returning();
-    return updated;
+    const updateData: any = { ...data };
+    if (data.tags) updateData.tags = data.tags;
+    if (data.metaKeywords) updateData.metaKeywords = data.metaKeywords;
+
+    await db.update(newsArticles)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(newsArticles.id, id));
+    return await this.getNewsArticle(id);
   }
 
   async deleteNewsArticle(id: string): Promise<boolean> {
-    const result = await db.delete(newsArticles).where(eq(newsArticles.id, id));
-    return true;
+    const [result] = await db.delete(newsArticles).where(eq(newsArticles.id, id));
+    return result.affectedRows > 0;
   }
 
   // News Outbox CRUD
   async createOutboxEntry(entry: InsertNewsOutbox): Promise<NewsOutbox> {
-    const [created] = await db.insert(newsOutbox).values(entry).returning();
-    return created;
+    const id = randomUUID();
+    await db.insert(newsOutbox).values({ ...entry, id });
+    return (await this.getOutboxEntry(id))!;
   }
 
   async getOutboxEntry(id: string): Promise<NewsOutbox | undefined> {
@@ -121,11 +135,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOutboxEntry(id: string, data: Partial<InsertNewsOutbox>): Promise<NewsOutbox | undefined> {
-    const [updated] = await db.update(newsOutbox)
+    await db.update(newsOutbox)
       .set(data)
-      .where(eq(newsOutbox.id, id))
-      .returning();
-    return updated;
+      .where(eq(newsOutbox.id, id));
+    return await this.getOutboxEntry(id);
   }
 }
 
@@ -203,4 +216,4 @@ export class MemStorage implements IStorage {
   async updateOutboxEntry(id: string, data: Partial<InsertNewsOutbox>): Promise<NewsOutbox | undefined> { return undefined; }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

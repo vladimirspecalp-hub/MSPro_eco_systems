@@ -7,3 +7,7 @@ attached_assets
 mspro-website.zip
 .config
 .replit
+uploads/
+*.tar.gz
+test_upload.txt
+

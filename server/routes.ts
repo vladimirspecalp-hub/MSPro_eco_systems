@@ -5,8 +5,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertCalculationSchema } from "@shared/schema";
 import { generatePageContent } from "./services/ai_seo";
-import { writeFileSync, readFileSync } from "fs";
-import { resolve, join } from "path";
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from "fs";
+import { resolve, join, extname } from "path";
+import multer from "multer";
 import seoApiRouter from "./routes/seo-api";
 import geoApiRouter from "./routes/geo-api";
 import aeoApiRouter from "./routes/aeo-api";
@@ -14,6 +15,7 @@ import uxApiRouter from "./routes/ux-api";
 import healthApiRouter from "./routes/health-api";
 import newsApiRouter from "./routes/news-api";
 import { geoContextMiddleware } from "./middleware/geo-context";
+import { notificationService } from "./services/notification";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const publicDocsPath = resolve(import.meta.dirname, "..", "public", "documents");
@@ -46,19 +48,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // News API v1.0
   app.use("/api/news", newsApiRouter);
 
+
+  // --- File Upload Configuration ---
+  const uploadDir = resolve(process.cwd(), "uploads");
+  if (!existsSync(uploadDir)) {
+    mkdirSync(uploadDir);
+  }
+
+  const storageConfig = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + extname(file.originalname));
+    },
+  });
+
+  const fileFilter = (_req: any, file: Express.Multer.File, cb: any) => {
+    const allowedExtensions = [
+      // Images
+      ".jpg", ".jpeg", ".png", ".webp", ".heic",
+      // Documents
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf"
+    ];
+    const ext = extname(file.originalname).toLowerCase();
+
+    if (allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("File type not allowed"));
+    }
+  };
+
+  const upload = multer({
+    storage: storageConfig,
+    fileFilter: fileFilter,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit per file
+  });
+
   // Lead routes
-  app.post("/api/leads", async (req, res) => {
+  app.post("/api/leads", upload.array("files", 10), async (req, res) => {
     try {
-      const validatedData = insertLeadSchema.parse(req.body);
-      const lead = await storage.createLead(validatedData);
+      console.log("POST /api/leads request body:", req.body);
+      // Fix Cyrillic filename encoding (Multer often parses as latin1)
+      if (Array.isArray(req.files)) {
+        (req.files as Express.Multer.File[]).forEach(f => {
+          f.originalname = Buffer.from(f.originalname, 'latin1').toString('utf8');
+        });
+      }
+
+      console.log("Files:", req.files);
+
+      // Multer processes files first. We need to manually construct the object for Zod if it was sent as FormData
+      // FormData sends everything as strings, so we might need to parse.
+      // But Zod schema expects strings for standard fields, which matches FormData.
+
+      const rawData = { ...req.body };
+
+      // If files were uploaded, add their paths/names to attachments
+      if (Array.isArray(req.files) && req.files.length > 0) {
+        rawData.attachments = (req.files as Express.Multer.File[]).map(f => f.filename);
+      }
+
+      const validatedData = insertLeadSchema.parse(rawData);
+      console.log("Validation passed.");
+
+      // Attach file info for notification service (it needs paths)
+      const filesForNotification = (req.files as Express.Multer.File[]) || [];
+
+      // 1. Send Notification FIRST (Critical Path)
+      try {
+        await notificationService.sendLeadNotification(validatedData, filesForNotification);
+        console.log("Notification sent successfully (pre-DB).");
+      } catch (err) {
+        console.error("Notification trigger failed:", err);
+      }
+
+      // 2. Try to save to DB (Secondary Path if DB is broken)
+      let lead;
+      try {
+        console.log("Creating lead in storage...");
+        lead = await storage.createLead(validatedData);
+        console.log("Lead created in DB:", lead.id);
+      } catch (dbError) {
+        console.error("DB Save Failed (Ignored for Client):", dbError);
+        // If DB fails, we still return success to the client because Notification was sent.
+        // We return the original data with a temporary ID.
+        lead = {
+          ...validatedData,
+          id: 'temp_' + Date.now(),
+          createdAt: new Date()
+        };
+      }
+
       res.json(lead);
     } catch (error: any) {
+      console.error("Lead Handler Execution Failed:", error);
       if (error instanceof z.ZodError) {
-        console.error("Validation Error:", JSON.stringify(error.flatten(), null, 2));
+        console.error("Validation Details:", JSON.stringify(error.flatten(), null, 2));
+        res.status(400).json({ error: "Validation Error", details: error.flatten() });
       } else {
-        console.error("Lead Error:", error);
+        const msg = error instanceof Error ? error.message : String(error);
+        res.status(400).json({ error: msg, raw: String(error) });
       }
-      res.status(400).json({ error: error.message });
     }
   });
 

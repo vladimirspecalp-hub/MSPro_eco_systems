@@ -22,7 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Paperclip } from "lucide-react";
+import { useState } from "react";
 
 interface LeadFormProps {
   defaultServiceType?: string;
@@ -35,14 +36,21 @@ import { getRegionBySlug } from "@/lib/geo-utils";
 import { getServiceGenitive } from "@/lib/grammar";
 import { getIntentFromKeywords } from "@/content/copySystem";
 
+import { SERVICE_TYPES } from "@/lib/calculator-data";
+
 export function LeadForm({ defaultServiceType, source = "website", onSuccess }: LeadFormProps) {
   const { toast } = useToast();
   const [location] = useLocation();
+  const [files, setFiles] = useState<File[]>([]);
 
   // Parse search params carefully
   const searchParams = new URLSearchParams(window.location.search);
   const regionSlug = searchParams.get("region");
   const query = searchParams.get("query");
+
+  // Calculator Handover
+  const calcDetails = searchParams.get("details");
+  const calcService = searchParams.get("service");
 
   // Geographic Context
   const regionCtx = regionSlug ? getRegionBySlug(regionSlug) : null;
@@ -56,14 +64,13 @@ export function LeadForm({ defaultServiceType, source = "website", onSuccess }: 
     ? `Закажите услуги в ${regionNamePrepositional}`
     : "Оставьте заявку";
 
-  const submitLabel = query
-    ? `Рассчитать стоимость (${query})`
-    : "Отправить заявку";
-
-  // Note: 'query' might be raw. Ideally map intent to service name:
-  // But user requested "Calculate cost [Service]".
-  // If query is 'fireproofing', `submitLabel` should probably be "Рассчитать стоимость огнезащиты".
-  // Let's refine `submitLabel` logic below if needed.
+  // Determine initial service type
+  let initialServiceType = defaultServiceType || "";
+  if (calcService) {
+    // Find matching service from shared types
+    const found = SERVICE_TYPES.find(s => s.id === calcService);
+    if (found) initialServiceType = found.id;
+  }
 
   const computedSubmitLabel = query
     ? `Рассчитать стоимость ${getServiceGenitive(query)}`
@@ -75,15 +82,38 @@ export function LeadForm({ defaultServiceType, source = "website", onSuccess }: 
       name: "",
       phone: "",
       email: "",
-      serviceType: defaultServiceType || "",
-      message: "",
+      serviceType: initialServiceType,
+      message: calcDetails || "",
       source: `${source} (Region: ${regionSlug || 'unknown'}, Query: ${query || 'none'})`,
     },
   });
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
-      return await apiRequest("POST", "/api/leads", data);
+      const formData = new FormData();
+      Object.keys(data).forEach((key) => {
+        const value = data[key as keyof InsertLead];
+        if (value !== undefined && value !== null) {
+          formData.append(key, String(value));
+        }
+      });
+
+      files.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      // Use fetch directly for FormData to avoid Content-Type JSON header issues
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create lead");
+      }
+
+      return res.json();
     },
     onSuccess: () => {
       toast({
@@ -94,10 +124,11 @@ export function LeadForm({ defaultServiceType, source = "website", onSuccess }: 
         name: "",
         phone: "",
         email: "",
-        serviceType: defaultServiceType || "",
+        serviceType: initialServiceType,
         message: "",
         source,
       });
+      setFiles([]);
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       if (onSuccess) {
         onSuccess();
@@ -114,6 +145,35 @@ export function LeadForm({ defaultServiceType, source = "website", onSuccess }: 
 
   const onSubmit = (data: InsertLead) => {
     createLeadMutation.mutate(data);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const allowedExts = [
+        "jpg", "jpeg", "png", "webp", "heic",
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf"
+      ];
+
+      const validFiles = newFiles.filter(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext && allowedExts.includes(ext);
+      });
+
+      if (validFiles.length !== newFiles.length) {
+        toast({
+          title: "Файл не поддерживается",
+          description: "Пожалуйста, загружайте только изображения, PDF или документы Office.",
+          variant: "destructive"
+        });
+      }
+
+      setFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -181,11 +241,9 @@ export function LeadForm({ defaultServiceType, source = "website", onSuccess }: 
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="chimney-painting">Покраска дымовых труб</SelectItem>
-                  <SelectItem value="anti-corrosion">Антикоррозионная защита</SelectItem>
-                  <SelectItem value="high-altitude-works">Высотные работы</SelectItem>
-                  <SelectItem value="facade-repair">Ремонт фасадов</SelectItem>
-                  <SelectItem value="mspro-quad">MSPRO Quad покрытие</SelectItem>
+                  {SERVICE_TYPES.map(service => (
+                    <SelectItem key={service.id} value={service.id}>{service.label}</SelectItem>
+                  ))}
                   <SelectItem value="other">Другое</SelectItem>
                 </SelectContent>
               </Select>
@@ -213,6 +271,53 @@ export function LeadForm({ defaultServiceType, source = "website", onSuccess }: 
             </FormItem>
           )}
         />
+
+        {/* File Upload Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => document.getElementById('file-upload')?.click()}
+              className="w-full sm:w-auto"
+            >
+              <Paperclip className="mr-2 h-4 w-4" />
+              Прикрепить файл
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Макс. 10 МБ (Фото, PDF, Word, Excel)
+            </span>
+            <input
+              id="file-upload"
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".jpg,.jpeg,.png,.webp,.heic,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf"
+              aria-label="Загрузить файлы"
+            />
+          </div>
+
+          {files.length > 0 && (
+            <div className="space-y-2">
+              {files.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-secondary/50 rounded-md border border-border text-sm">
+                  <span className="truncate max-w-[200px] text-foreground">{file.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFile(index)}
+                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                  >
+                    X
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
 
         <Button
           type="submit"

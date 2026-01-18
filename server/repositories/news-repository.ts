@@ -6,7 +6,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve } from "path";
-import { v4 as uuidv4 } from "crypto";
+import { randomUUID } from "crypto";
 
 export interface NewsPostGeo {
   regionCode?: string;
@@ -108,7 +108,7 @@ export interface INewsRepository {
 const STORE_PATH = resolve(process.cwd(), "content/news_store.json");
 
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${randomUUID().split('-')[0]}`;
 }
 
 function transliterate(text: string): string {
@@ -133,7 +133,7 @@ export class FileNewsRepository implements INewsRepository {
 
   private loadStore(): NewsStore {
     if (this.cache) return this.cache;
-    
+
     if (!existsSync(STORE_PATH)) {
       const empty: NewsStore = { articles: [], distributionJobs: [], lastUpdated: null };
       writeFileSync(STORE_PATH, JSON.stringify(empty, null, 2));
@@ -155,7 +155,7 @@ export class FileNewsRepository implements INewsRepository {
   async upsertByExternalId(payload: Partial<NewsPost> & { externalId: string }): Promise<NewsPost> {
     const store = this.loadStore();
     const existing = store.articles.find(a => a.externalId === payload.externalId);
-    
+
     if (existing) {
       const updated = { ...existing, ...payload, updatedAt: new Date().toISOString() };
       const index = store.articles.findIndex(a => a.id === existing.id);
@@ -186,7 +186,7 @@ export class FileNewsRepository implements INewsRepository {
   async create(payload: Omit<NewsPost, "id" | "createdAt" | "updatedAt">): Promise<NewsPost> {
     const store = this.loadStore();
     const now = new Date().toISOString();
-    
+
     const post: NewsPost = {
       ...payload,
       id: generateId(),
@@ -202,13 +202,13 @@ export class FileNewsRepository implements INewsRepository {
   async update(id: string, patch: Partial<NewsPost>): Promise<NewsPost | null> {
     const store = this.loadStore();
     const index = store.articles.findIndex(a => a.id === id);
-    
+
     if (index === -1) return null;
-    
-    const updated = { 
-      ...store.articles[index], 
-      ...patch, 
-      updatedAt: new Date().toISOString() 
+
+    const updated = {
+      ...store.articles[index],
+      ...patch,
+      updatedAt: new Date().toISOString()
     };
     store.articles[index] = updated;
     this.saveStore(store);
@@ -228,30 +228,30 @@ export class FileNewsRepository implements INewsRepository {
   async list(options: ListOptions): Promise<{ items: NewsPost[]; total: number }> {
     const store = this.loadStore();
     let items = [...store.articles];
-    
+
     if (options.status) {
       items = items.filter(a => a.status === options.status);
     }
-    
+
     if (options.tag) {
       items = items.filter(a => a.tags.includes(options.tag!));
     }
 
     items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
+
     const total = items.length;
     const offset = options.offset || 0;
     const limit = options.limit || 20;
-    
+
     items = items.slice(offset, offset + limit);
-    
+
     return { items, total };
   }
 
   async publish(id: string): Promise<NewsPost | null> {
-    return this.update(id, { 
-      status: "published", 
-      publishedAt: new Date().toISOString() 
+    return this.update(id, {
+      status: "published",
+      publishedAt: new Date().toISOString()
     });
   }
 
@@ -302,7 +302,7 @@ export class FileNewsRepository implements INewsRepository {
   ): Promise<NewsDistributionJob[]> {
     const store = this.loadStore();
     const post = store.articles.find(a => a.id === postId);
-    
+
     if (!post) {
       throw new Error(`Post not found: ${postId}`);
     }
@@ -318,7 +318,7 @@ export class FileNewsRepository implements INewsRepository {
       );
 
       const utmUrl = `${siteUrl}/news/${post.slug}?utm_source=${platformId}&utm_medium=social&utm_campaign=news&utm_content=${post.slug}`;
-      
+
       const payload = {
         title: post.title,
         excerpt: post.excerpt,
@@ -330,7 +330,7 @@ export class FileNewsRepository implements INewsRepository {
 
       if (existingJob) {
         // Update existing job
-        const newStatus = setting.enabled 
+        const newStatus = setting.enabled
           ? (existingJob.status === "posted" || existingJob.status === "published" ? existingJob.status : "queued")
           : "disabled";
 

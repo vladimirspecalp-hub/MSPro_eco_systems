@@ -1,0 +1,4 @@
+PassengerEnabled on
+PassengerAppRoot /home/m/mspro/mspro-ltd.ru/public_html
+PassengerAppType node
+PassengerStartupFile dist/index.js

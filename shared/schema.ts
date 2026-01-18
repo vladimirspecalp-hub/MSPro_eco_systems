@@ -1,28 +1,29 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, decimal } from "drizzle-orm/pg-core";
+import { mysqlTable, text, varchar, timestamp, int, decimal, json } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const leads = pgTable("leads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const leads = mysqlTable("leads", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`(uuid())`),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   email: text("email").notNull(),
   serviceType: text("service_type").notNull(),
   message: text("message"),
   source: text("source"),
+  attachments: json("attachments").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const calculations = pgTable("calculations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const calculations = mysqlTable("calculations", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`(uuid())`),
   serviceType: text("service_type").notNull(),
-  height: decimal("height"),
-  diameter: decimal("diameter"),
-  surfaceArea: decimal("surface_area"),
+  height: decimal("height", { precision: 10, scale: 2 }),
+  diameter: decimal("diameter", { precision: 10, scale: 2 }),
+  surfaceArea: decimal("surface_area", { precision: 10, scale: 2 }),
   coatingType: text("coating_type"),
-  estimatedCost: decimal("estimated_cost"),
-  leadId: varchar("lead_id").references(() => leads.id),
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
+  leadId: varchar("lead_id", { length: 36 }).references(() => leads.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -35,15 +36,15 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
   message: z.string().optional(),
   serviceType: z.enum([
-    "chimney-painting",
-    "anti-corrosion",
-    "high-altitude-works",
-    "facade-repair",
-    "mspro-quad",
+    "chimney_painting",
+    "anticorrosion",
+    "rope_access",
+    "fireproofing",
+    "mspro_quad",
     "other",
-    // Fallback for legacy or unknown types
     ""
   ]).or(z.string()),
+  attachments: z.array(z.string()).optional(),
 });
 
 export const insertCalculationSchema = createInsertSchema(calculations).omit({
@@ -63,8 +64,8 @@ export type Calculation = typeof calculations.$inferSelect;
  * Поддерживает интеграцию с n8n для автоматического инжеста
  * Расширенная спецификация v2.0
  */
-export const newsArticles = pgTable("news_articles", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const newsArticles = mysqlTable("news_articles", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`(uuid())`),
   externalId: varchar("external_id", { length: 255 }).unique(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   title: text("title").notNull(),
@@ -75,7 +76,7 @@ export const newsArticles = pgTable("news_articles", {
   coverImage: text("cover_image"),
   author: varchar("author", { length: 255 }).default("MSPRO"),
   category: varchar("category", { length: 100 }),
-  tags: text("tags").array(),
+  tags: json("tags").$type<string[]>(),
   geoRegionCode: varchar("geo_region_code", { length: 50 }),
   geoCity: varchar("geo_city", { length: 255 }),
   status: varchar("status", { length: 50 }).default("draft").notNull(),
@@ -83,7 +84,7 @@ export const newsArticles = pgTable("news_articles", {
   canonicalUrl: text("canonical_url"),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
-  metaKeywords: text("meta_keywords").array(),
+  metaKeywords: json("meta_keywords").$type<string[]>(),
   ogImage: text("og_image"),
   jsonLd: text("json_ld"),
   aeoAnswerBlock: text("aeo_answer_block"),
@@ -99,9 +100,9 @@ export const newsArticles = pgTable("news_articles", {
  * Реализует pattern "Outbox" для надёжной доставки
  * Расширенная спецификация v2.0
  */
-export const newsOutbox = pgTable("news_outbox", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  articleId: varchar("article_id").references(() => newsArticles.id).notNull(),
+export const newsOutbox = mysqlTable("news_outbox", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`(uuid())`),
+  articleId: varchar("article_id", { length: 36 }).references(() => newsArticles.id).notNull(),
   platform: varchar("platform", { length: 100 }).notNull(),
   status: varchar("status", { length: 50 }).default("queued").notNull(),
   payload: text("payload"),
@@ -109,7 +110,7 @@ export const newsOutbox = pgTable("news_outbox", {
   externalUrl: text("external_url"),
   backlinkUrl: text("backlink_url"),
   errorMessage: text("error_message"),
-  attempts: integer("attempts").default(0),
+  attempts: int("attempts").default(0),
   scheduledAt: timestamp("scheduled_at"),
   postedAt: timestamp("posted_at"),
   processedAt: timestamp("processed_at"),

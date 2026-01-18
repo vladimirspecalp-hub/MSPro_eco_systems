@@ -4,10 +4,10 @@
  */
 
 import { storage } from "../storage";
-import { 
-  type NewsArticle, 
-  type InsertNewsArticle, 
-  insertNewsArticleSchema 
+import {
+  type NewsArticle,
+  type InsertNewsArticle,
+  insertNewsArticleSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -38,7 +38,7 @@ function generateSlug(title: string): string {
     'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
     'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
   };
-  
+
   return title
     .toLowerCase()
     .split('')
@@ -76,7 +76,7 @@ function generateJsonLd(article: NewsArticle, baseUrl: string): string {
       "@id": article.canonicalUrl || `${baseUrl}/news/${article.slug}`
     }
   };
-  
+
   return JSON.stringify(jsonLd);
 }
 
@@ -104,17 +104,17 @@ export class NewsService {
     outboxEntries: string[];
   }> {
     const validated = n8nIngestSchema.parse(payload);
-    
+
     const slug = validated.slug || generateSlug(validated.title);
     const existingArticle = await storage.getNewsArticleBySlug(slug);
-    
+
     if (existingArticle) {
       throw new Error(`Article with slug "${slug}" already exists`);
     }
 
     const canonicalUrl = generateCanonicalUrl(slug, this.baseUrl);
     const now = new Date();
-    
+
     const articleData: InsertNewsArticle = {
       slug,
       title: validated.title,
@@ -130,18 +130,18 @@ export class NewsService {
       metaTitle: validated.title,
       metaDescription: validated.excerpt || validated.content.substring(0, 160),
       ogImage: validated.coverImage,
-      sourceId: validated.sourceId,
+      sourceRef: validated.sourceId,
       sourceType: validated.sourceType || "n8n",
     };
 
     const article = await storage.createNewsArticle(articleData);
-    
+
     const jsonLd = generateJsonLd(article, this.baseUrl);
     await storage.updateNewsArticle(article.id, { jsonLd });
 
     const outboxEntries: string[] = [];
     const platforms = validated.platforms || ["telegram", "vk", "rss"];
-    
+
     for (const platform of platforms) {
       const entry = await storage.createOutboxEntry({
         articleId: article.id,
@@ -202,7 +202,7 @@ export class NewsService {
    */
   async generateRssFeed(): Promise<string> {
     const articles = await this.getPublished();
-    
+
     const items = articles.slice(0, 50).map(article => `
     <item>
       <title><![CDATA[${article.title}]]></title>
@@ -233,7 +233,7 @@ export class NewsService {
    */
   async generateNewsSitemap(): Promise<string> {
     const articles = await this.getPublished();
-    
+
     const urls = articles.slice(0, 1000).map(article => `
   <url>
     <loc>${article.canonicalUrl}</loc>
