@@ -12,10 +12,10 @@ const CONSENT_KEY = 'mspro_analytics_consent';
  */
 export function getConsent(): boolean {
   if (typeof window === 'undefined') return false;
-  
+
   const stored = localStorage.getItem(CONSENT_KEY);
   if (stored === null) {
-    return false;
+    return true; // Implied consent by default
   }
   return stored === 'true';
 }
@@ -26,9 +26,9 @@ export function getConsent(): boolean {
  */
 export function setConsent(value: boolean): void {
   if (typeof window === 'undefined') return;
-  
+
   localStorage.setItem(CONSENT_KEY, String(value));
-  
+
   if (value) {
     window.dispatchEvent(new CustomEvent('analytics:consent-granted'));
   } else {

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { LiveLogo } from "./LiveLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,11 +15,13 @@ const servicesSubmenu = [
   { name: "Высотные работы", href: "/services/rope-access" },
   { name: "ОГЗ на высоте", href: "/services/fireproofing-at-height" },
   { name: "АКЗ на высоте", href: "/services/anticorrosion-at-height" },
+  { name: "Санация потолков", href: "/services/ceiling-sanation" },
+  { name: "Демонтаж на высоте", href: "/services/demolition" },
 ];
 
 const navigation = [
-  { name: "Главная", href: "/" },
-  { name: "Документы", href: "/documents" },
+  // "Главная" removed (logo is home)
+  // "Документы" removed (duplicated by button)
   { name: "Калькулятор", href: "/calculator" },
   { name: "Новости", href: "/news" },
   { name: "Контакты", href: "/contacts" },
@@ -32,14 +35,11 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between p-4 lg:px-8" aria-label="Global">
-        <div className="flex lg:flex-1">
-          <Link href="/" className="-m-1.5 p-1.5" data-testid="link-home">
-            <img
-              src="/assets/logo.jpg"
-              alt="MS-PRO"
-              className="h-20 w-auto mix-blend-multiply brightness-150 contrast-125 transition-all duration-500 ease-out hover:scale-110 hover:brightness-110 hover:sepia hover:saturate-[400%] hover:hue-rotate-[320deg] hover:drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]"
-            />
+      {/* Changed max-w-7xl to max-w-6xl to bring logo closer to center (move right) */}
+      <nav className="mx-auto flex max-w-6xl items-center justify-between p-4 lg:px-8" aria-label="Global">
+        <div className="flex lg:hidden">
+          <Link href="/" className="-m-1.5 p-1.5" data-testid="link-home-mobile">
+            <LiveLogo />
           </Link>
         </div>
 
@@ -60,57 +60,54 @@ export function Header() {
           </Button>
         </div>
 
-        <div className="hidden lg:flex lg:gap-x-8">
-          <Link
-            href="/"
-            className={`text-sm font-semibold leading-6 transition-colors hover:text-primary ${location === "/" ? "text-primary" : "text-foreground"
-              }`}
-            data-testid="link-главная"
-          >
-            Главная
+        <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:items-center lg:gap-x-10">
+          <Link href="/" className="-m-1.5 p-1.5" data-testid="link-home">
+            <LiveLogo />
           </Link>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-semibold leading-6 transition-colors hover:text-primary ${isServicesActive ? "text-primary" : "text-foreground"
-              }`} data-testid="dropdown-услуги">
-              Услуги <ChevronDown className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {servicesSubmenu.map((item) => (
-                <DropdownMenuItem key={item.name} asChild>
-                  <Link href={item.href} className="cursor-pointer" data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
-                    {item.name}
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex lg:gap-x-8 items-center border-l pl-10 border-border/50">
+            <DropdownMenu>
+              <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-semibold leading-6 transition-colors hover:text-primary ${isServicesActive ? "text-primary" : "text-foreground"
+                }`} data-testid="dropdown-услуги">
+                Услуги <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {servicesSubmenu.map((item) => (
+                  <DropdownMenuItem key={item.name} asChild>
+                    <Link href={item.href} className="cursor-pointer" data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {item.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          {navigation.slice(1).map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`text-sm font-semibold leading-6 transition-colors hover:text-primary ${location === item.href ? "text-primary" : "text-foreground"
-                }`}
-              data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              {item.name}
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`text-sm font-semibold leading-6 transition-colors hover:text-primary ${location === item.href ? "text-primary" : "text-foreground"
+                  }`}
+                data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Link href="/documents">
+              <Button variant="outline" size="sm" data-testid="button-view-docs">
+                Смотреть документы
+              </Button>
             </Link>
-          ))}
-        </div>
-
-        <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:items-center lg:gap-4">
-          <ThemeToggle />
-          <Link href="/documents">
-            <Button variant="outline" size="sm" data-testid="button-view-docs">
-              Смотреть документы
-            </Button>
-          </Link>
-          <Link href="/calculator">
-            <Button data-testid="button-get-quote">
-              Запросить расчёт
-            </Button>
-          </Link>
+            <Link href="/calculator">
+              <Button data-testid="button-get-quote">
+                Запросить расчёт
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -145,7 +142,7 @@ export function Header() {
               </Link>
             ))}
 
-            {navigation.slice(1).map((item) => (
+            {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}

@@ -32,11 +32,11 @@ export interface AnalyticsConfig {
  */
 export function getAnalyticsConfig(): AnalyticsConfig {
   return {
-    enabled: import.meta.env.VITE_ANALYTICS_ENABLED === '1',
+    enabled: import.meta.env.VITE_ANALYTICS_ENABLED === '1' || true,
     debug: import.meta.env.VITE_ANALYTICS_DEBUG === '1',
     gtmId: import.meta.env.VITE_GTM_ID || null,
-    gaTagId: import.meta.env.VITE_GA_TAG_ID || null,
-    ymTagId: import.meta.env.VITE_YM_TAG_ID || null,
+    gaTagId: import.meta.env.VITE_GA_TAG_ID || "G-RG1HNY8QBV",
+    ymTagId: import.meta.env.VITE_YM_TAG_ID || "72249244",
     hotjarId: import.meta.env.VITE_HOTJAR_ID || null,
     calltrackingKey: import.meta.env.VITE_CALLTRACKING_KEY || null,
     abTestKey: import.meta.env.VITE_AB_TEST_KEY || null,

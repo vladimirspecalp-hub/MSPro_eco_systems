@@ -45,6 +45,13 @@ export const BehaviorEventSchema = z.object({
     'cta_view',
     'cta_click',
     'time_on_page',
+    'phone_click',
+    'messenger_click',
+    'calc_start',
+    'calc_submit',
+    'news_open',
+    'share_click',
+    'file_download',
   ]),
   page: z.string(),
   element: z.string().optional(),
@@ -118,7 +125,7 @@ defaultExperiments.forEach(exp => experiments.set(exp.id, exp));
  */
 export function getOrCreateProfile(sessionId: string, region?: string | null): UserProfile {
   let profile = userProfiles.get(sessionId);
-  
+
   if (!profile) {
     profile = {
       sessionId,
@@ -133,7 +140,7 @@ export function getOrCreateProfile(sessionId: string, region?: string | null): U
     };
     userProfiles.set(sessionId, profile);
   }
-  
+
   return profile;
 }
 
@@ -150,7 +157,7 @@ export function assignExperimentVariant(
   }
 
   const profile = getOrCreateProfile(sessionId);
-  
+
   if (profile.experiments[experimentId]) {
     const existingVariant = experiment.variants.find(
       v => v.id === profile.experiments[experimentId]
@@ -198,11 +205,11 @@ export function trackEvent(event: BehaviorEvent): void {
   const profile = userProfiles.get(validated.sessionId);
   if (profile) {
     profile.events.push(validated);
-    
+
     if (validated.type === 'page_view' && !profile.pages_viewed.includes(validated.page)) {
       profile.pages_viewed.push(validated.page);
     }
-    
+
     profile.updatedAt = new Date().toISOString();
   }
 }
@@ -212,7 +219,7 @@ export function trackEvent(event: BehaviorEvent): void {
  */
 export function getPersonalizedContent(sessionId: string): Record<string, any> {
   const profile = userProfiles.get(sessionId);
-  
+
   const content: Record<string, any> = {
     experiments: {},
     recommendations: [],
@@ -299,14 +306,14 @@ export function getCROMetrics(): Record<string, any> {
     for (const variant of experiment.variants) {
       variantCounts[variant.id] = 0;
     }
-    
+
     Array.from(userProfiles.values()).forEach((profile) => {
       const variantId = profile.experiments[expId];
       if (variantId && variantCounts[variantId] !== undefined) {
         variantCounts[variantId]++;
       }
     });
-    
+
     experimentMetrics[expId] = {
       name: experiment.name,
       active: experiment.active,

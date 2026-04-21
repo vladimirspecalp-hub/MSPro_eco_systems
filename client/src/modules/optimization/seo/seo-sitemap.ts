@@ -1,4 +1,4 @@
-import { allSEOData } from '@/lib/seo-loader';
+// import { allSEOData } from '@/lib/seo-loader';
 
 export interface SitemapEntry {
   loc: string;
@@ -9,7 +9,7 @@ export interface SitemapEntry {
 
 export function generateSitemapEntries(baseUrl: string = 'https://mspro.ru'): SitemapEntry[] {
   const today = new Date().toISOString().split('T')[0];
-  
+
   const staticPages: SitemapEntry[] = [
     { loc: baseUrl, lastmod: today, changefreq: 'daily', priority: 1.0 },
     { loc: `${baseUrl}/calculator`, lastmod: today, changefreq: 'weekly', priority: 0.9 },
@@ -17,19 +17,14 @@ export function generateSitemapEntries(baseUrl: string = 'https://mspro.ru'): Si
     { loc: `${baseUrl}/contact`, lastmod: today, changefreq: 'monthly', priority: 0.7 },
   ];
 
-  const servicePages: SitemapEntry[] = allSEOData.map(entry => ({
-    loc: `${baseUrl}/services/${entry.slug}`,
-    lastmod: today,
-    changefreq: 'weekly' as const,
-    priority: 0.8,
-  }));
-
-  return [...staticPages, ...servicePages];
+  // Client-side sitemap generation is disabled for performance.
+  // Use server-side sitemap.xml instead.
+  return staticPages;
 }
 
 export function generateSitemapXML(baseUrl?: string): string {
   const entries = generateSitemapEntries(baseUrl);
-  
+
   const urlElements = entries.map(entry => `
   <url>
     <loc>${entry.loc}</loc>

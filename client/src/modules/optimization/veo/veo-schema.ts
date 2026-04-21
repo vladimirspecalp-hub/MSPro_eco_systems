@@ -12,24 +12,15 @@ export interface VideoData {
 
 export const COMPANY_VIDEOS: VideoData[] = [
   {
-    id: 'video-1',
-    title: 'Покраска дымовой трубы 120 метров — MS-PRO',
-    description: 'Процесс покраски промышленной дымовой трубы высотой 120 метров с использованием покрытия MSPRO Quad.',
-    thumbnailUrl: 'https://mspro.ru/video/thumb-1.jpg',
-    uploadDate: '2024-06-15',
-    duration: 'PT5M30S',
-    embedUrl: 'https://www.youtube.com/embed/example1',
+    id: 'BUgl1aUvbQU',
+    title: 'Промышленный альпинизм MS-PRO — Выполнение работ на высоте',
+    description: 'Профессиональное выполнение высотных работ: покраска дымовых труб, антикоррозийная защита, огнезащита. Работаем по всей России.',
+    thumbnailUrl: 'https://img.youtube.com/vi/BUgl1aUvbQU/maxresdefault.jpg',
+    uploadDate: '2024-01-01', // Примерная дата, лучше обновить если известна
+    duration: 'PT2M30S', // Примерная длительность
+    embedUrl: 'https://www.youtube.com/embed/BUgl1aUvbQU',
     platform: 'youtube',
-  },
-  {
-    id: 'video-2',
-    title: 'Технология нанесения MSPRO Quad',
-    description: 'Подробный обзор технологии нанесения огнезащитного покрытия MSPRO Quad на промышленные объекты.',
-    thumbnailUrl: 'https://mspro.ru/video/thumb-2.jpg',
-    uploadDate: '2024-05-20',
-    duration: 'PT8M15S',
-    embedUrl: 'https://www.youtube.com/embed/example2',
-    platform: 'youtube',
+    contentUrl: 'https://youtu.be/BUgl1aUvbQU',
   },
 ];
 

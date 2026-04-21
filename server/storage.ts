@@ -5,8 +5,7 @@ import {
   type NewsOutbox, type InsertNewsOutbox,
   leads, calculations, newsArticles, newsOutbox
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
@@ -32,103 +31,6 @@ export interface IStorage {
   updateOutboxEntry(id: string, data: Partial<InsertNewsOutbox>): Promise<NewsOutbox | undefined>;
 }
 
-export class DatabaseStorage implements IStorage {
-  async createLead(insertLead: InsertLead): Promise<Lead> {
-    const [lead] = await db.insert(leads).values(insertLead).returning();
-    return lead;
-  }
-
-  async getLead(id: string): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
-    return lead;
-  }
-
-  async getAllLeads(): Promise<Lead[]> {
-    return await db.select().from(leads);
-  }
-
-  async createCalculation(insertCalculation: InsertCalculation): Promise<Calculation> {
-    const [calculation] = await db.insert(calculations).values(insertCalculation).returning();
-    return calculation;
-  }
-
-  async getCalculation(id: string): Promise<Calculation | undefined> {
-    const [calculation] = await db.select().from(calculations).where(eq(calculations.id, id));
-    return calculation;
-  }
-
-  async getAllCalculations(): Promise<Calculation[]> {
-    return await db.select().from(calculations);
-  }
-
-  // News Articles CRUD
-  async createNewsArticle(article: InsertNewsArticle): Promise<NewsArticle> {
-    const [created] = await db.insert(newsArticles).values(article).returning();
-    return created;
-  }
-
-  async getNewsArticle(id: string): Promise<NewsArticle | undefined> {
-    const [article] = await db.select().from(newsArticles).where(eq(newsArticles.id, id));
-    return article;
-  }
-
-  async getNewsArticleBySlug(slug: string): Promise<NewsArticle | undefined> {
-    const [article] = await db.select().from(newsArticles).where(eq(newsArticles.slug, slug));
-    return article;
-  }
-
-  async getAllNewsArticles(status?: string): Promise<NewsArticle[]> {
-    if (status) {
-      return await db.select().from(newsArticles)
-        .where(eq(newsArticles.status, status))
-        .orderBy(desc(newsArticles.publishedAt));
-    }
-    return await db.select().from(newsArticles).orderBy(desc(newsArticles.createdAt));
-  }
-
-  async updateNewsArticle(id: string, data: Partial<InsertNewsArticle>): Promise<NewsArticle | undefined> {
-    const [updated] = await db.update(newsArticles)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(newsArticles.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteNewsArticle(id: string): Promise<boolean> {
-    const result = await db.delete(newsArticles).where(eq(newsArticles.id, id));
-    return true;
-  }
-
-  // News Outbox CRUD
-  async createOutboxEntry(entry: InsertNewsOutbox): Promise<NewsOutbox> {
-    const [created] = await db.insert(newsOutbox).values(entry).returning();
-    return created;
-  }
-
-  async getOutboxEntry(id: string): Promise<NewsOutbox | undefined> {
-    const [entry] = await db.select().from(newsOutbox).where(eq(newsOutbox.id, id));
-    return entry;
-  }
-
-  async getOutboxByArticle(articleId: string): Promise<NewsOutbox[]> {
-    return await db.select().from(newsOutbox).where(eq(newsOutbox.articleId, articleId));
-  }
-
-  async getPendingOutbox(): Promise<NewsOutbox[]> {
-    return await db.select().from(newsOutbox)
-      .where(eq(newsOutbox.status, "pending"))
-      .orderBy(newsOutbox.scheduledAt);
-  }
-
-  async updateOutboxEntry(id: string, data: Partial<InsertNewsOutbox>): Promise<NewsOutbox | undefined> {
-    const [updated] = await db.update(newsOutbox)
-      .set(data)
-      .where(eq(newsOutbox.id, id))
-      .returning();
-    return updated;
-  }
-}
-
 export class MemStorage implements IStorage {
   private leads: Map<string, Lead>;
   private calculations: Map<string, Calculation>;
@@ -150,10 +52,6 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       message: insertLead.message ?? null,
       source: insertLead.source ?? null,
-      city: insertLead.city ?? null,
-      systemType: insertLead.systemType ?? null,
-      calculatedPrice: insertLead.calculatedPrice ? insertLead.calculatedPrice.toString() : null,
-      details: insertLead.details ?? null,
     };
     this.leads.set(id, lead);
     return lead;
@@ -192,7 +90,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.calculations.values());
   }
 
-  // News Stubs
+  // News Stubs (News are handled by newsRepository now)
   async createNewsArticle(article: InsertNewsArticle): Promise<NewsArticle> { throw new Error("Method not implemented."); }
   async getNewsArticle(id: string): Promise<NewsArticle | undefined> { return undefined; }
   async getNewsArticleBySlug(slug: string): Promise<NewsArticle | undefined> { return undefined; }
@@ -207,4 +105,4 @@ export class MemStorage implements IStorage {
   async updateOutboxEntry(id: string, data: Partial<InsertNewsOutbox>): Promise<NewsOutbox | undefined> { return undefined; }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();

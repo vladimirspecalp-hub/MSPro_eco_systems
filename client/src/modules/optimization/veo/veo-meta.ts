@@ -21,7 +21,7 @@ export function generateYouTubeMeta(video: VideoData): VideoMeta {
 
   return {
     title: `${video.title} | MS-PRO`,
-    description: `${video.description}\n\n🔗 Сайт: https://mspro.ru\n📞 Телефон: +7 (800) 555-35-35\n\n#покраскатруб #MSPRO #промышленнаяпокраска`,
+    description: `${video.description}\n\n🔗 Сайт: https://mspro.ru\n📞 Телефон: +7 (987) 909-29-38\n\n#покраскатруб #MSPRO #промышленнаяпокраска`,
     tags: baseTags,
     category: 'Science & Technology',
     language: 'ru',
@@ -39,7 +39,7 @@ export function generateVideoTitle(keyword: string, type: 'how-to' | 'showcase' 
 
 export function generateVideoDescription(keyword: string, region?: string): string {
   let description = `В этом видео показываем процесс: ${keyword}.\n\n`;
-  
+
   if (region) {
     description += `📍 Объект находится в регионе: ${region}\n\n`;
   }
@@ -48,7 +48,7 @@ export function generateVideoDescription(keyword: string, region?: string): stri
   description += `✅ Сертифицировано Ростехнадзором\n`;
   description += `✅ Работаем по всей России\n\n`;
   description += `🔗 Оставить заявку: https://mspro.ru/calculator\n`;
-  description += `📞 Горячая линия: +7 (800) 555-35-35`;
+  description += `📞 Горячая линия: +7 (987) 909-29-38`;
 
   return description;
 }

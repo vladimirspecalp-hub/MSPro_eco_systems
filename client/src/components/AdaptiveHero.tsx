@@ -1,4 +1,3 @@
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Check, FileText, Shield, ArrowRight } from "lucide-react";
@@ -49,41 +48,33 @@ export function AdaptiveHero({ overrideIntent }: AdaptiveHeroProps) {
   const variant = getHeroVariant(intent);
   const secondaryRoute = getSecondaryCTARoute(variant.ctaSecondaryLabel);
 
-  // Chameleon Effect: Dynamic H1 from query param
-  if (typeof window !== "undefined") {
-    const params = new URLSearchParams(window.location.search);
-    const query = params.get("query");
-    if (query) {
-      variant.h1 = query.replace(/_/g, " ");
-    }
-  }
-
   return (
-    <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
+    <section className="relative py-20 lg:py-32 overflow-hidden">
       <div className="absolute inset-0 z-0">
         <img
           src="/assets/hero-bg.jpg"
           alt="Industrial Background"
-          className="w-full h-full object-cover object-top"
+          className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/60" />
       </div>
+
       <div className="relative z-10 mx-auto max-w-7xl px-4 lg:px-8">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary" data-testid="badge-mspro">
+        <div className="mx-auto max-w-3xl text-center text-white">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium" data-testid="badge-mspro">
             <Shield className="h-4 w-4" />
             MS-PRO Промышленный альпинизм
           </div>
 
           <h1
-            className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl"
+            className="text-4xl font-bold uppercase tracking-tight sm:text-5xl lg:text-6xl"
             data-testid="text-hero-h1"
           >
             {variant.h1}
           </h1>
 
           <p
-            className="mt-6 text-lg leading-8 text-muted-foreground sm:text-xl"
+            className="mt-6 text-lg leading-8 text-gray-300 sm:text-xl"
             data-testid="text-hero-subhead"
           >
             {variant.subhead}
@@ -92,8 +83,8 @@ export function AdaptiveHero({ overrideIntent }: AdaptiveHeroProps) {
           <ul className="mt-8 space-y-3 text-left sm:mx-auto sm:max-w-2xl" data-testid="list-hero-bullets">
             {variant.bullets.map((bullet, index) => (
               <li key={index} className="flex items-start gap-3">
-                <Check className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
-                <span className="text-muted-foreground">{bullet}</span>
+                <Check className="mt-1 h-5 w-5 flex-shrink-0 text-white" />
+                <span className="text-gray-300">{bullet}</span>
               </li>
             ))}
           </ul>
@@ -101,13 +92,13 @@ export function AdaptiveHero({ overrideIntent }: AdaptiveHeroProps) {
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <div className="flex flex-col items-center">
               <Link href="/calculator">
-                <Button size="lg" className="gap-2" data-testid="button-hero-primary-cta">
+                <Button size="lg" className="gap-2 h-12 px-8" data-testid="button-hero-primary-cta">
                   {variant.ctaLabel}
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
               {variant.ctaMicrocopy && (
-                <p className="mt-2 text-sm text-muted-foreground" data-testid="text-hero-primary-microcopy">
+                <p className="mt-2 text-sm text-gray-400" data-testid="text-hero-primary-microcopy">
                   {variant.ctaMicrocopy}
                 </p>
               )}
@@ -115,20 +106,20 @@ export function AdaptiveHero({ overrideIntent }: AdaptiveHeroProps) {
 
             <div className="flex flex-col items-center">
               <Link href={secondaryRoute}>
-                <Button variant="outline" size="lg" className="gap-2" data-testid="button-hero-secondary-cta">
-                  <FileText className="h-4 w-4" />
+                <Button variant="outline" size="lg" className="gap-2 h-12 px-8 border-white/20 text-white hover:bg-white/10 hover:text-white" data-testid="button-hero-secondary-cta">
+                  <FileText className="h-5 w-5" />
                   {variant.ctaSecondaryLabel}
                 </Button>
               </Link>
               {variant.ctaSecondaryMicrocopy && (
-                <p className="mt-2 text-sm text-muted-foreground" data-testid="text-hero-secondary-microcopy">
+                <p className="mt-2 text-sm text-gray-400" data-testid="text-hero-secondary-microcopy">
                   {variant.ctaSecondaryMicrocopy}
                 </p>
               )}
             </div>
           </div>
 
-          <div className="mt-12 rounded-lg border bg-card/50 p-4 text-sm text-muted-foreground" data-testid="block-hero-trust">
+          <div className="mt-12 rounded-lg border border-white/10 bg-black/20 p-4 text-sm text-gray-400" data-testid="block-hero-trust">
             <p>{TRUST_BLOCKS.verified}</p>
           </div>
         </div>

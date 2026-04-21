@@ -1,0 +1,9 @@
+# Блокировка запросов к PHP файлам (сайт работает на Node.js, PHP не используется)
+<FilesMatch "\.php(\d+)?$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule \.php(\d+)?$ - [F,L]
+</IfModule>

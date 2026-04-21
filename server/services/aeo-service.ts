@@ -80,7 +80,7 @@ export async function generateAEOContent(request: GenerateRequest): Promise<AEOG
   const validated = GenerateRequestSchema.parse(request);
   const { slug, region, faqCount, includeSchemas } = validated;
 
-  const seoEntry = getPageBySlug(slug);
+  const seoEntry = await getPageBySlug(slug);
   const geoRegion = region ? getRegionByCode(region) : null;
 
   const faq = await generateFAQ(slug, seoEntry, geoRegion, faqCount);
@@ -309,7 +309,7 @@ function buildOrganizationSchema(): object {
     logo: 'https://mspro.ru/logo.png',
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+7-800-555-35-35',
+      telephone: '+7-987-909-29-38',
       contactType: 'customer service',
       areaServed: 'RU',
       availableLanguage: 'Russian',

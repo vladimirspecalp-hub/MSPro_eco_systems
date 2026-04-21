@@ -27,13 +27,13 @@ const router = Router();
  * @example
  * GET /api/seo/pages?page=1&limit=20&region=Москва
  */
-router.get('/pages', (req, res) => {
+router.get('/pages', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const region = req.query.region as string | undefined;
 
-    const result = getPages(page, limit, region);
+    const result = await getPages(page, limit, region);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -47,13 +47,13 @@ router.get('/pages', (req, res) => {
  * @example
  * GET /api/seo/page/pokraska-dymovoj-truby
  */
-router.get('/page/:slug', (req, res) => {
+router.get('/page/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
-    const entry = getPageBySlug(slug);
+    const entry = await getPageBySlug(slug);
 
     if (!entry) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'Page not found',
         slug,
       });
@@ -76,18 +76,18 @@ router.get('/page/:slug', (req, res) => {
  * @example
  * GET /api/seo/search?q=покраска&limit=10
  */
-router.get('/search', (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const query = req.query.q as string;
-    
+
     if (!query || query.trim().length === 0) {
-      return res.status(400).json({ 
-        error: 'Query parameter "q" is required' 
+      return res.status(400).json({
+        error: 'Query parameter "q" is required'
       });
     }
 
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
-    const results = searchPages(query.trim(), limit);
+    const results = await searchPages(query.trim(), limit);
 
     res.json({
       query,
@@ -106,9 +106,9 @@ router.get('/search', (req, res) => {
  * @example
  * GET /api/seo/stats
  */
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
-    const stats = getSEOStats();
+    const stats = await getSEOStats();
     res.json(stats);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -122,13 +122,13 @@ router.get('/stats', (req, res) => {
  * @example
  * GET /api/seo/related/pokraska-dymovoj-truby?limit=6
  */
-router.get('/related/:slug', (req, res) => {
+router.get('/related/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     const limit = Math.min(20, Math.max(1, parseInt(req.query.limit as string) || 6));
-    
-    const related = getRelatedPages(slug, limit);
-    
+
+    const related = await getRelatedPages(slug, limit);
+
     res.json({
       slug,
       count: related.length,

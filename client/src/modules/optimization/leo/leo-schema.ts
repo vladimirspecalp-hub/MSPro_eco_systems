@@ -26,21 +26,21 @@ export interface LocalBusinessData {
 
 export const MSPRO_BUSINESS: LocalBusinessData = {
   name: 'MS-PRO',
-  description: 'Профессиональная покраска дымовых труб и антикоррозийная защита промышленных объектов. Гарантия 20 лет.',
-  telephone: '+7 (800) 555-35-35',
-  email: 'info@mspro.ru',
-  url: 'https://mspro.ru',
-  logo: 'https://mspro.ru/logo.png',
+  description: 'Промышленный альпинизм, огнезащита металлоконструкций, антикоррозийная защита. Лицензия МЧС, допуск СРО. Работаем по всей России.',
+  telephone: '+7 (987) 909-29-38',
+  email: 'info@mspro-ltd.ru',
+  url: 'https://mspro-ltd.ru',
+  logo: 'https://mspro-ltd.ru/assets/logo.jpg',
   address: {
-    streetAddress: 'ул. Промышленная, 10',
-    addressLocality: 'Москва',
-    addressRegion: 'Московская область',
-    postalCode: '123456',
+    streetAddress: 'пр. Кирова, 275',
+    addressLocality: 'Самара',
+    addressRegion: 'Самарская область',
+    postalCode: '443001',
     addressCountry: 'RU',
   },
   geo: {
-    latitude: 55.7558,
-    longitude: 37.6173,
+    latitude: 53.2415, // Approximate coords for Kirova 275 Samara
+    longitude: 50.2212,
   },
   openingHours: ['Mo-Fr 09:00-18:00', 'Sa 10:00-15:00'],
   priceRange: '₽₽₽',

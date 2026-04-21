@@ -12,15 +12,21 @@ import Contacts from "@/pages/Contacts";
 import Calculator from "@/pages/Calculator";
 import Documents from "@/pages/Documents";
 import MSPROQuad from "@/pages/MSPROQuad";
+import FAQ from "@/pages/FAQ";
 import RopeAccess from "@/pages/services/RopeAccess";
 import FireproofingAtHeight from "@/pages/services/FireproofingAtHeight";
 import AnticorrosionAtHeight from "@/pages/services/AnticorrosionAtHeight";
+import CeilingSanation from "@/pages/services/CeilingSanation";
+import Demolition from "@/pages/services/Demolition";
 import ServicePage from "@/pages/services/[slug]";
 import SEOPage from "@/pages/SEOPage";
 import News from "@/pages/News";
 import NewsArticle from "@/pages/NewsArticle";
 import NewsDistribution from "@/pages/admin/NewsDistribution";
 import AdminLeads from "@/pages/AdminLeads";
+import PriceGuide from "@/pages/PriceGuide";
+import PricesPage from "@/pages/PricesPage";
+import TeamPage from "@/pages/company/TeamPage";
 import NotFound from "@/pages/not-found";
 import { initAnalytics, useSpaPageView, initEventDelegation } from "@/modules/analytics";
 
@@ -32,14 +38,20 @@ function Router() {
       <Route path="/calculator" component={Calculator} />
       <Route path="/documents" component={Documents} />
       <Route path="/mspro-quad" component={MSPROQuad} />
+      <Route path="/faq" component={FAQ} />
       <Route path="/services/rope-access" component={RopeAccess} />
       <Route path="/services/fireproofing-at-height" component={FireproofingAtHeight} />
       <Route path="/services/anticorrosion-at-height" component={AnticorrosionAtHeight} />
+      <Route path="/services/ceiling-sanation" component={CeilingSanation} />
+      <Route path="/services/demolition" component={Demolition} />
       <Route path="/news" component={News} />
       <Route path="/news/:slug" component={NewsArticle} />
       <Route path="/admin/news-distribution" component={NewsDistribution} />
       <Route path="/admin/leads" component={AdminLeads} />
       <Route path="/services/:slug" component={ServicePage} />
+      <Route path="/price-guide/:slug" component={PriceGuide} />
+      <Route path="/prices" component={PricesPage} />
+      <Route path="/company/team" component={TeamPage} />
       <Route path="/:slug" component={SEOPage} />
       <Route component={NotFound} />
     </Switch>
@@ -55,6 +67,7 @@ function App() {
   useEffect(() => {
     initAnalytics();
     initEventDelegation();
+    console.log("App mounted");
   }, []);
 
   return (

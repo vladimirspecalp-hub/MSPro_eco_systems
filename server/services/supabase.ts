@@ -1,2 +1,0 @@
-// TODO: Supabase service
-export {};

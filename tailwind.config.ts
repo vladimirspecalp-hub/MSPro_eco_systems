@@ -82,11 +82,7 @@ export default {
           offline: "rgb(156 163 175)",
         },
       },
-      fontFamily: {
-        sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
-      },
+
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

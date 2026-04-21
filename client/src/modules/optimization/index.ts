@@ -7,6 +7,6 @@ export * from './eeat';
 export * from './cro';
 export * from './leo';
 export * from './veo';
-export * from './peo';
+export * as peo from './peo';
 export * from './eco';
 export * from './metrics';

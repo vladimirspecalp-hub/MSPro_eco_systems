@@ -1,7 +1,8 @@
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { LeadForm } from "@/modules/leads/LeadForm";
-import { MapPin, Building, User, Phone, Mail } from "lucide-react";
+import { MapPin, Building, User, Phone, Mail, Globe } from "lucide-react";
+import { Geography } from "@/components/Geography";
 
 export default function Contacts() {
   const { toast } = useToast();
@@ -38,7 +39,7 @@ export default function Contacts() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Phone className="h-5 w-5" />
-                  Телефон
+                  Телефон (Федеральный)
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -72,14 +73,25 @@ export default function Contacts() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  Адрес
+                  Центральный офис
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-semibold" data-testid="text-address">
-                  443091, г. Самара, пр. Кирова, д. 275, оф. 29
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">Работаем по всей России</p>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-500 mb-1">Юридический адрес:</h4>
+                    <p className="text-lg">
+                      443091, г. Самара, пр. Кирова, д. 275, оф. 29
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-500 mb-1">География работ:</h4>
+                    <p className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-blue-500" />
+                      <span className="font-medium">Вся территория РФ</span>
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -115,6 +127,10 @@ export default function Contacts() {
           </div>
         </div>
       </div>
-    </div>
+
+      <div className="mt-24">
+        <Geography />
+      </div>
+    </div >
   );
 }

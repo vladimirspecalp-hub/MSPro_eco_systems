@@ -1,9 +1,37 @@
-node_modules
-dist
+# Dependencies & builds
+node_modules/
+dist/
+ssr-out/
+.cache/
+.vite/
+
+# Env (никогда в репо!)
 .env
+.env.*
+!.env.example
+production.env
+
+# User content (бэкапится отдельно, не в git)
+uploads/
+
+# Logs
+*.log
+*.log.*
+logs/
+
+# Backups
+backups/
+backup_*/
+*.tar.gz
+*.tgz
+
+# OS / editor
 .DS_Store
-.gemini
-attached_assets
-mspro-website.zip
-.config
-.replit
+Thumbs.db
+.vscode/
+.idea/
+
+# Temp
+tmp/
+tmp_map
+ama.

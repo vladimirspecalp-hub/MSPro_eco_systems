@@ -4,7 +4,7 @@
  * @module server/services/distribution-settings
  */
 
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { promises as fs, existsSync } from "fs";
 import { resolve } from "path";
 import { NEWS_PLATFORMS, PLATFORM_IDS } from "../../shared/newsPlatforms";
 
@@ -46,55 +46,55 @@ function getDefaultSettings(): SettingsStore {
 class DistributionSettingsService {
   private cache: SettingsStore | null = null;
 
-  private loadSettings(): SettingsStore {
+  private async loadSettings(): Promise<SettingsStore> {
     if (this.cache) return this.cache;
 
     if (!existsSync(SETTINGS_PATH)) {
       const defaults = getDefaultSettings();
-      writeFileSync(SETTINGS_PATH, JSON.stringify(defaults, null, 2));
+      await fs.writeFile(SETTINGS_PATH, JSON.stringify(defaults, null, 2));
       this.cache = defaults;
       return defaults;
     }
 
-    const data = readFileSync(SETTINGS_PATH, "utf-8");
+    const data = await fs.readFile(SETTINGS_PATH, "utf-8");
     this.cache = JSON.parse(data);
     return this.cache!;
   }
 
-  private saveSettings(store: SettingsStore): void {
+  private async saveSettings(store: SettingsStore): Promise<void> {
     store.lastUpdated = new Date().toISOString();
     this.cache = store;
-    writeFileSync(SETTINGS_PATH, JSON.stringify(store, null, 2));
+    await fs.writeFile(SETTINGS_PATH, JSON.stringify(store, null, 2));
   }
 
   /**
    * Получить настройки всех платформ
    */
-  getPlatformSettings(): Record<string, PlatformSetting> {
-    const store = this.loadSettings();
+  async getPlatformSettings(): Promise<Record<string, PlatformSetting>> {
+    const store = await this.loadSettings();
     return store.platforms;
   }
 
   /**
    * Получить настройку одной платформы
    */
-  getPlatformSetting(platformId: string): PlatformSetting | null {
-    const store = this.loadSettings();
+  async getPlatformSetting(platformId: string): Promise<PlatformSetting | null> {
+    const store = await this.loadSettings();
     return store.platforms[platformId] || null;
   }
 
   /**
    * Обновить настройку платформы
    */
-  updatePlatformSetting(
+  async updatePlatformSetting(
     platformId: string,
     patch: Partial<PlatformSetting>
-  ): PlatformSetting | null {
+  ): Promise<PlatformSetting | null> {
     if (!PLATFORM_IDS.includes(platformId)) {
       return null;
     }
 
-    const store = this.loadSettings();
+    const store = await this.loadSettings();
     const current = store.platforms[platformId] || getDefaultSettings().platforms[platformId];
 
     store.platforms[platformId] = {
@@ -103,17 +103,17 @@ class DistributionSettingsService {
       updatedAt: new Date().toISOString()
     };
 
-    this.saveSettings(store);
+    await this.saveSettings(store);
     return store.platforms[platformId];
   }
 
   /**
    * Обновить несколько настроек сразу
    */
-  updateMultiplePlatformSettings(
+  async updateMultiplePlatformSettings(
     updates: Array<{ platformId: string } & Partial<PlatformSetting>>
-  ): Record<string, PlatformSetting> {
-    const store = this.loadSettings();
+  ): Promise<Record<string, PlatformSetting>> {
+    const store = await this.loadSettings();
 
     for (const update of updates) {
       const { platformId, ...patch } = update;
@@ -127,7 +127,7 @@ class DistributionSettingsService {
       };
     }
 
-    this.saveSettings(store);
+    await this.saveSettings(store);
     return store.platforms;
   }
 
@@ -135,7 +135,7 @@ class DistributionSettingsService {
    * Получить агрегированный статус по каждой платформе
    * (последний статус и дата последней попытки из distributionJobs)
    */
-  getAggregatedStatus(): Record<string, AggregatedStatus> {
+  async getAggregatedStatus(): Promise<Record<string, AggregatedStatus>> {
     const result: Record<string, AggregatedStatus> = {};
 
     for (const id of PLATFORM_IDS) {
@@ -152,7 +152,7 @@ class DistributionSettingsService {
     }
 
     try {
-      const storeData = readFileSync(NEWS_STORE_PATH, "utf-8");
+      const storeData = await fs.readFile(NEWS_STORE_PATH, "utf-8");
       const store = JSON.parse(storeData);
       const jobs = store.distributionJobs || [];
 
@@ -185,8 +185,8 @@ class DistributionSettingsService {
   /**
    * Получить публичные настройки (без секретов)
    */
-  getPublicSettings(): Record<string, { enabled: boolean; profileUrl: string | null }> {
-    const settings = this.getPlatformSettings();
+  async getPublicSettings(): Promise<Record<string, { enabled: boolean; profileUrl: string | null }>> {
+    const settings = await this.getPlatformSettings();
     const result: Record<string, { enabled: boolean; profileUrl: string | null }> = {};
 
     for (const [id, setting] of Object.entries(settings)) {

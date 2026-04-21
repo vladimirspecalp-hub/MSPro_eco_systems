@@ -16,7 +16,7 @@ import type { InsertNewsArticle, NewsArticle } from "@shared/schema";
 const router = Router();
 
 const NEWS_SECRET = process.env.NEWS_INGEST_SECRET || "mspro-news-secret-dev";
-const SITE_URL = process.env.SITE_URL || "https://mspro-ecosystems.replit.app";
+const SITE_URL = process.env.SITE_URL || "https://mspro-ltd.ru";
 const NEWS_CANONICAL_BASE = process.env.NEWS_CANONICAL_BASE || "/news";
 
 function transliterate(text: string): string {
@@ -48,7 +48,7 @@ function authMiddleware(req: Request, res: Response, next: Function): void {
 function generateShareLinks(slug: string): Record<string, string> {
   const baseUrl = `${SITE_URL}${NEWS_CANONICAL_BASE}/${slug}`;
   const utmBase = `utm_medium=social&utm_campaign=news&utm_content=${slug}`;
-  
+
   return {
     telegram: `${baseUrl}?utm_source=telegram&${utmBase}`,
     vk: `${baseUrl}?utm_source=vk&${utmBase}`,
@@ -83,7 +83,6 @@ const ingestSchema = z.object({
   status: z.enum(["draft", "scheduled", "published"]).optional(),
 });
 
-const USE_DATABASE = false; // Fallback to file storage (Supabase tenant unavailable)
 
 /**
  * POST /api/news/ingest - Ingest от n8n
@@ -97,40 +96,6 @@ router.post("/ingest", authMiddleware, async (req: Request, res: Response) => {
     const shareLinks = generateShareLinks(slug);
     const now = new Date();
 
-    if (USE_DATABASE) {
-      const existing = await storage.getNewsArticleBySlug(slug);
-      
-      const articleData: InsertNewsArticle = {
-        externalId: payload.externalId,
-        slug,
-        title: payload.title,
-        excerpt: payload.excerpt || "",
-        content: payload.contentHtml || payload.contentMarkdown || "",
-        contentMarkdown: payload.contentMarkdown || "",
-        contentHtml: payload.contentHtml || payload.contentMarkdown || "",
-        coverImage: payload.coverImageUrl || null,
-        tags: payload.tags || [],
-        category: payload.category || null,
-        geoRegionCode: payload.geo?.regionCode || null,
-        geoCity: payload.geo?.city || null,
-        status: payload.status || "draft",
-        publishedAt: payload.status === "published" ? now : null,
-        canonicalUrl,
-        metaTitle: payload.title,
-        metaDescription: payload.excerpt || "",
-        sourceType: "n8n",
-        sourceRef: payload.externalId
-      };
-
-      let post: NewsArticle;
-      if (existing) {
-        post = await storage.updateNewsArticle(existing.id, articleData) as NewsArticle;
-      } else {
-        post = await storage.createNewsArticle(articleData);
-      }
-
-      return res.json({ ok: true, post, canonicalUrl, shareLinks });
-    }
 
     const postData = {
       externalId: payload.externalId,
@@ -166,31 +131,7 @@ router.post("/ingest", authMiddleware, async (req: Request, res: Response) => {
 router.get("/", async (req: Request, res: Response) => {
   try {
     const { status = "published", limit = "20", offset = "0" } = req.query;
-    
-    if (USE_DATABASE) {
-      const articles = await storage.getAllNewsArticles(status as string);
-      const offsetNum = parseInt(offset as string);
-      const limitNum = parseInt(limit as string);
-      const items = articles.slice(offsetNum, offsetNum + limitNum);
-      
-      return res.json({
-        ok: true,
-        items: items.map(a => ({
-          id: a.id,
-          slug: a.slug,
-          title: a.title,
-          excerpt: a.excerpt,
-          coverImageUrl: a.coverImage,
-          category: a.category,
-          tags: a.tags,
-          publishedAt: a.publishedAt,
-          createdAt: a.createdAt
-        })),
-        total: articles.length,
-        limit: limitNum,
-        offset: offsetNum
-      });
-    }
+
 
     const result = await newsRepository.list({
       status: status as string,
@@ -217,7 +158,7 @@ router.get("/", async (req: Request, res: Response) => {
 router.get("/rss.xml", async (req: Request, res: Response) => {
   try {
     const { items } = await newsRepository.list({ status: "published", limit: 50 });
-    
+
     const rssItems = items.map(post => `
     <item>
       <title><![CDATA[${post.title}]]></title>
@@ -255,7 +196,7 @@ router.get("/rss.xml", async (req: Request, res: Response) => {
 router.get("/sitemap.xml", async (req: Request, res: Response) => {
   try {
     const { items } = await newsRepository.list({ status: "published", limit: 1000 });
-    
+
     const urls = items.map(post => `
   <url>
     <loc>${generateCanonicalUrl(post.slug)}</loc>
@@ -303,11 +244,11 @@ router.get("/platforms", async (req: Request, res: Response) => {
     const secret = req.headers["x-mspro-news-secret"];
     const isAdmin = secret === NEWS_SECRET;
 
-    const settings = isAdmin 
-      ? distributionSettingsService.getPlatformSettings()
-      : distributionSettingsService.getPublicSettings();
-    
-    const aggregated = distributionSettingsService.getAggregatedStatus();
+    const settings = isAdmin
+      ? await distributionSettingsService.getPlatformSettings()
+      : await distributionSettingsService.getPublicSettings();
+
+    const aggregated = await distributionSettingsService.getAggregatedStatus();
 
     res.json({
       ok: true,
@@ -327,13 +268,13 @@ router.get("/platforms", async (req: Request, res: Response) => {
 router.put("/platforms", authMiddleware, async (req: Request, res: Response) => {
   try {
     const payload = platformUpdateSchema.parse(req.body);
-    
+
     if (!PLATFORM_IDS.includes(payload.platformId)) {
       return res.status(400).json({ ok: false, error: "Unknown platform" });
     }
 
     const { platformId, ...patch } = payload;
-    const updated = distributionSettingsService.updatePlatformSetting(platformId, patch);
+    const updated = await distributionSettingsService.updatePlatformSetting(platformId, patch);
 
     res.json({ ok: true, setting: updated });
   } catch (error: any) {
@@ -353,64 +294,13 @@ router.get("/:slug", async (req: Request, res: Response) => {
     const draft = req.query.draft === "1";
     const secret = req.headers["x-mspro-news-secret"];
 
-    if (USE_DATABASE) {
-      const article = await storage.getNewsArticleBySlug(slug);
-      
-      if (!article) {
-        return res.status(404).json({ ok: false, error: "Not found" });
-      }
-      
-      if (article.status !== "published" && !(draft && secret === NEWS_SECRET)) {
-        return res.status(404).json({ ok: false, error: "Not found" });
-      }
 
-      const canonicalUrl = generateCanonicalUrl(slug);
-      const shareLinks = generateShareLinks(slug);
-
-      return res.json({
-        ok: true,
-        post: {
-          id: article.id,
-          slug: article.slug,
-          title: article.title,
-          excerpt: article.excerpt,
-          contentMarkdown: article.contentMarkdown,
-          contentHtml: article.contentHtml || article.content,
-          coverImageUrl: article.coverImage,
-          category: article.category,
-          tags: article.tags,
-          publishedAt: article.publishedAt,
-          createdAt: article.createdAt,
-          updatedAt: article.updatedAt,
-          seo: { title: article.metaTitle, description: article.metaDescription }
-        },
-        canonicalUrl,
-        shareLinks,
-        meta: {
-          title: article.metaTitle || article.title,
-          description: article.metaDescription || article.excerpt,
-          image: article.ogImage || article.coverImage,
-          jsonLd: {
-            "@context": "https://schema.org",
-            "@type": "NewsArticle",
-            headline: article.title,
-            description: article.excerpt,
-            image: article.coverImage,
-            datePublished: article.publishedAt,
-            dateModified: article.updatedAt,
-            author: { "@type": "Organization", name: "MSPRO" },
-            publisher: { "@type": "Organization", name: "MSPRO" }
-          }
-        }
-      });
-    }
-    
     const post = await newsRepository.getBySlug(slug);
-    
+
     if (!post) {
       return res.status(404).json({ ok: false, error: "Not found" });
     }
-    
+
     if (post.status !== "published" && !(draft && secret === NEWS_SECRET)) {
       return res.status(404).json({ ok: false, error: "Not found" });
     }
@@ -453,13 +343,13 @@ router.post("/:id/publish", authMiddleware, async (req: Request, res: Response) 
   try {
     const { id } = req.params;
     const post = await newsRepository.publish(id);
-    
+
     if (!post) {
       return res.status(404).json({ ok: false, error: "Not found" });
     }
 
     // Auto-create outbox jobs for all 15 platforms
-    const settings = distributionSettingsService.getPlatformSettings();
+    const settings = await distributionSettingsService.getPlatformSettings();
     const jobs = await newsRepository.ensureOutboxForPost(id, settings, SITE_URL);
 
     res.json({ ok: true, post, outboxJobs: jobs.length });
@@ -474,7 +364,7 @@ router.post("/:id/publish", authMiddleware, async (req: Request, res: Response) 
 router.post("/distribution/enqueue", authMiddleware, async (req: Request, res: Response) => {
   try {
     const { postId, platforms } = req.body;
-    
+
     if (!postId || !platforms || !Array.isArray(platforms)) {
       return res.status(400).json({ ok: false, error: "postId and platforms[] required" });
     }
@@ -514,7 +404,7 @@ router.post("/distribution/enqueue", authMiddleware, async (req: Request, res: R
 router.post("/distribution/callback", authMiddleware, async (req: Request, res: Response) => {
   try {
     const { jobId, status, remoteUrl, error: errorMsg } = req.body;
-    
+
     if (!jobId) {
       return res.status(400).json({ ok: false, error: "jobId required" });
     }
@@ -542,7 +432,7 @@ router.post("/distribution/callback", authMiddleware, async (req: Request, res: 
 router.get("/distribution/jobs", authMiddleware, async (req: Request, res: Response) => {
   try {
     const { postId } = req.query;
-    
+
     if (postId) {
       const jobs = await newsRepository.getDistributionJobs(postId as string);
       return res.json({ ok: true, jobs });
@@ -561,9 +451,9 @@ router.get("/distribution/jobs", authMiddleware, async (req: Request, res: Respo
 router.post("/compile", authMiddleware, async (req: Request, res: Response) => {
   try {
     const { rawMaterial } = req.body;
-    res.json({ 
-      ok: true, 
-      status: "queued", 
+    res.json({
+      ok: true,
+      status: "queued",
       message: "ConfiuiAI compilation queued (stub)",
       material: rawMaterial ? "received" : "empty"
     });
@@ -598,14 +488,14 @@ const markSchema = z.object({
 router.post("/outbox/dispatch", authMiddleware, async (req: Request, res: Response) => {
   try {
     const payload = dispatchSchema.parse(req.body || {});
-    
+
     const jobs = await newsRepository.getQueuedJobs({
       limit: payload.limit,
       platforms: payload.platforms
     });
 
-    res.json({ 
-      ok: true, 
+    res.json({
+      ok: true,
       items: jobs,
       count: jobs.length
     });
@@ -624,12 +514,12 @@ router.post("/outbox/dispatch", authMiddleware, async (req: Request, res: Respon
 router.post("/outbox/mark", authMiddleware, async (req: Request, res: Response) => {
   try {
     const payload = markSchema.parse(req.body);
-    
+
     const updated = await newsRepository.markJobsBatch(payload.results);
 
-    res.json({ 
-      ok: true, 
-      updated: updated.length 
+    res.json({
+      ok: true,
+      updated: updated.length
     });
   } catch (error: any) {
     if (error.name === "ZodError") {

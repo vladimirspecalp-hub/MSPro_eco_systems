@@ -1,4 +1,5 @@
-import { allSEOData, type SEOEntry } from '@/lib/seo-loader';
+// import { allSEOData, type SEOEntry } from '@/lib/seo-loader';
+import type { SEOEntry } from '@/lib/seo-loader';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -62,50 +63,13 @@ export function validateSEOEntry(entry: SEOEntry): ValidationResult {
 }
 
 export function validateAllSEOData(): SEOValidationReport {
-  const titleMap = new Map<string, string[]>();
-  const slugMap = new Map<string, number>();
-  const issues: Array<{ slug: string; errors: string[]; warnings: string[] }> = [];
-  let validPages = 0;
-  let invalidPages = 0;
-
-  for (const entry of allSEOData) {
-    const result = validateSEOEntry(entry);
-    
-    if (result.isValid) {
-      validPages++;
-    } else {
-      invalidPages++;
-    }
-
-    if (result.errors.length > 0 || result.warnings.length > 0) {
-      issues.push({
-        slug: entry.slug,
-        errors: result.errors,
-        warnings: result.warnings,
-      });
-    }
-
-    const existingTitles = titleMap.get(entry.title) || [];
-    existingTitles.push(entry.slug);
-    titleMap.set(entry.title, existingTitles);
-
-    slugMap.set(entry.slug, (slugMap.get(entry.slug) || 0) + 1);
-  }
-
-  const duplicateTitles = Array.from(titleMap.entries())
-    .filter(([_, slugs]) => slugs.length > 1)
-    .map(([title]) => title);
-
-  const duplicateSlugs = Array.from(slugMap.entries())
-    .filter(([_, count]) => count > 1)
-    .map(([slug]) => slug);
-
+  // Stubbed: Client-side validation of full DB is disabled
   return {
-    totalPages: allSEOData.length,
-    validPages,
-    invalidPages,
-    duplicateTitles,
-    duplicateSlugs,
-    issues,
+    totalPages: 0,
+    validPages: 0,
+    invalidPages: 0,
+    duplicateTitles: [],
+    duplicateSlugs: [],
+    issues: [],
   };
 }

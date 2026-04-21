@@ -1,0 +1,22 @@
+{
+    "title": "Test Title",
+    "meta_title": "Test Meta Title",
+    "meta_description": "Test Meta Description",
+    "intro": "Test Intro",
+    "price_table": [
+        {
+            "service": "Service 1",
+            "price": "1000",
+            "comment": "Comment 1"
+        }
+    ],
+    "factors_block": "Factors",
+    "region_specifics": "Region Specifics",
+    "faq": [
+        {
+            "q": "Question 1",
+            "a": "Answer 1"
+        }
+    ],
+    "cta_text": "Call to action"
+}

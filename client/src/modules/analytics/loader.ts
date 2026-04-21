@@ -15,7 +15,7 @@ let initialized = false;
  */
 function loadGTM(gtmId: string): void {
   if (document.getElementById('gtm-script')) return;
-  
+
   const script = document.createElement('script');
   script.id = 'gtm-script';
   script.async = true;
@@ -35,13 +35,13 @@ function loadGTM(gtmId: string): void {
  */
 function loadGA4(gaTagId: string): void {
   if (document.getElementById('ga4-script')) return;
-  
+
   const script = document.createElement('script');
   script.id = 'ga4-script';
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${gaTagId}`;
   document.head.appendChild(script);
-  
+
   const initScript = document.createElement('script');
   initScript.innerHTML = `
     window.dataLayer = window.dataLayer || [];
@@ -58,7 +58,7 @@ function loadGA4(gaTagId: string): void {
  */
 function loadYM(ymTagId: string): void {
   if (document.getElementById('ym-script')) return;
-  
+
   const script = document.createElement('script');
   script.id = 'ym-script';
   script.innerHTML = `
@@ -83,7 +83,7 @@ function loadYM(ymTagId: string): void {
  */
 function loadHotjar(hotjarId: string): void {
   if (document.getElementById('hotjar-script')) return;
-  
+
   const script = document.createElement('script');
   script.id = 'hotjar-script';
   script.innerHTML = `
@@ -104,7 +104,7 @@ function loadHotjar(hotjarId: string): void {
  */
 function initDataLayer(): void {
   if (typeof window === 'undefined') return;
-  
+
   if (!(window as any).dataLayer) {
     (window as any).dataLayer = [];
   }
@@ -117,11 +117,18 @@ function initDataLayer(): void {
 export function initAnalytics(): boolean {
   if (typeof window === 'undefined') return false;
   if (initialized) return true;
-  
+
+  // Не запускать аналитику на localhost (dev-сессии)
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
+    initialized = true;
+    return false;
+  }
+
   const config = getConfig();
-  
+
   initDataLayer();
-  
+
   if (!config.enabled) {
     if (config.debug) {
       console.log('[Analytics] Disabled via VITE_ANALYTICS_ENABLED=0');
@@ -129,9 +136,9 @@ export function initAnalytics(): boolean {
     initialized = true;
     return true;
   }
-  
+
   const hasConsent = canRunAnalytics(config.debug);
-  
+
   if (!hasConsent) {
     if (config.debug) {
       console.log('[Analytics] No consent - external scripts not loaded');
@@ -139,27 +146,27 @@ export function initAnalytics(): boolean {
     initialized = true;
     return true;
   }
-  
+
   if (config.gtmId) {
     loadGTM(config.gtmId);
     if (config.debug) console.log('[Analytics] GTM loaded:', config.gtmId);
   }
-  
+
   if (config.gaTagId) {
     loadGA4(config.gaTagId);
     if (config.debug) console.log('[Analytics] GA4 loaded:', config.gaTagId);
   }
-  
+
   if (config.ymTagId) {
     loadYM(config.ymTagId);
     if (config.debug) console.log('[Analytics] YM loaded:', config.ymTagId);
   }
-  
+
   if (config.hotjarId) {
     loadHotjar(config.hotjarId);
     if (config.debug) console.log('[Analytics] Hotjar loaded:', config.hotjarId);
   }
-  
+
   initialized = true;
   return true;
 }
@@ -177,7 +184,7 @@ export function isInitialized(): boolean {
  */
 export function reinitializeOnConsent(): void {
   if (typeof window === 'undefined') return;
-  
+
   window.addEventListener('analytics:consent-granted', () => {
     initialized = false;
     initAnalytics();

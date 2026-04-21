@@ -53,7 +53,7 @@ router.post('/generate', async (req, res) => {
  */
 router.get('/schema/:type', (req, res) => {
   const { type } = req.params;
-  
+
   const templates: Record<string, object> = {
     service: {
       '@context': 'https://schema.org',
@@ -88,7 +88,7 @@ router.get('/schema/:type', (req, res) => {
       logo: 'https://mspro.ru/logo.png',
       contactPoint: {
         '@type': 'ContactPoint',
-        telephone: '+7-800-555-35-35',
+        telephone: '+7-987-909-29-38',
         contactType: 'customer service',
       },
     },
@@ -140,7 +140,7 @@ router.get('/schema/:type', (req, res) => {
 router.post('/validate', (req, res) => {
   try {
     const schema = req.body;
-    
+
     if (!schema || typeof schema !== 'object') {
       return res.status(400).json({
         error: 'Body must be a JSON object',
@@ -148,7 +148,7 @@ router.post('/validate', (req, res) => {
     }
 
     const result = validateJsonLdSchema(schema);
-    
+
     res.json({
       valid: result.valid,
       errors: result.errors,

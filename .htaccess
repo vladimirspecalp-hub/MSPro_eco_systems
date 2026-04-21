@@ -1,0 +1,6 @@
+PassengerNodejs /home/m/mspro/.local/bin/node
+PassengerAppRoot /home/m/mspro/mspro.beget.tech
+PassengerAppType node
+PassengerStartupFile dist/index.js
+PassengerFriendlyErrorPages on
+PassengerEnabled on

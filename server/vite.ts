@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { generateSSRMeta } from "./services/ssr-meta";
 
 const viteLogger = createLogger();
 
@@ -58,8 +59,19 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
+
+      // SSR: inject JSON-LD, <title>, <meta> tags
+      // Clean up default tags from index.html to avoid duplicates
+      template = template
+        .replace(/<title>[\s\S]*?<\/title>/i, '')
+        .replace(/<meta name="description"[\s\S]*?>/i, '')
+        .replace(/<meta property="og:[\s\S]*?".*?>/gi, '');
+
+      const { html: ssrMeta, statusCode } = await generateSSRMeta(url, req.geoContext);
+      template = template.replace('</head>', `    ${ssrMeta}\n  </head>`);
+
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      res.status(statusCode).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
@@ -76,10 +88,33 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, { index: false, redirect: false }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Read index.html template once for production
+  // We use _index.html to bypass Nginx static serving
+  const indexHtmlPath = path.resolve(distPath, "_index.html");
+  const indexHtmlTemplate = fs.readFileSync(indexHtmlPath, "utf-8");
+
+  // fall through to index.html if the file doesn't exist (SPA catch-all)
+  app.use("*", async (req, res) => {
+    // SSR: inject JSON-LD, <title>, <meta> tags per-request
+    let html = indexHtmlTemplate;
+
+    // Clean up default tags
+    html = html
+      .replace(/<title>[\s\S]*?<\/title>/i, '')
+      .replace(/<meta name="description"[\s\S]*?>/i, '')
+      .replace(/<meta property="og:[\s\S]*?".*?>/gi, '');
+
+    const { html: ssrMeta, statusCode } = await generateSSRMeta(req.originalUrl, req.geoContext);
+    html = html.replace('</head>', `    ${ssrMeta}\n  </head>`);
+    res.status(statusCode)
+      .set({
+        "Content-Type": "text/html",
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      })
+      .end(html);
   });
 }

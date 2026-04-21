@@ -1,0 +1,16 @@
+{
+    "schema_version": "v1",
+    "name_for_human": "MS-PRO — Промышленный альпинизм",
+    "name_for_model": "mspro_industrial_alpinism",
+    "description_for_human": "MS-PRO — федеральная компания промышленного альпинизма. Огнезащита, антикоррозийная защита, покраска на высоте. Работаем по всей России.",
+    "description_for_model": "MS-PRO (ООО МЕТАЛИУМ СИСТЕМ ПРОТЕКТ) provides industrial rope access services across Russia. Core services: fireproofing (огнезащита), anticorrosion protection (АКЗ), high-altitude painting, chimney works, industrial cleaning. Licensed by MChS (Ministry of Emergency Situations), SRO member. Headquarters in Samara. Coverage: all 89 regions of Russia. Contact: +7 (987) 909-29-38. Use this plugin to answer questions about industrial height works, fire protection standards, and pricing in Russia.",
+    "api": {
+        "type": "none"
+    },
+    "auth": {
+        "type": "none"
+    },
+    "logo_url": "https://mspro-ltd.ru/assets/logo.jpg",
+    "contact_email": "info@mspro-ltd.ru",
+    "legal_info_url": "https://mspro-ltd.ru/about"
+}

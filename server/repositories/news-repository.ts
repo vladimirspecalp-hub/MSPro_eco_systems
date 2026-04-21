@@ -4,9 +4,9 @@
  * @module server/repositories/news-repository
  */
 
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { promises as fs, existsSync } from "fs";
 import { resolve } from "path";
-import { v4 as uuidv4 } from "crypto";
+import { randomUUID } from "crypto";
 
 export interface NewsPostGeo {
   regionCode?: string;
@@ -108,7 +108,7 @@ export interface INewsRepository {
 const STORE_PATH = resolve(process.cwd(), "content/news_store.json");
 
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${randomUUID().split('-')[0]}`;
 }
 
 function transliterate(text: string): string {
@@ -131,36 +131,38 @@ function transliterate(text: string): string {
 export class FileNewsRepository implements INewsRepository {
   private cache: NewsStore | null = null;
 
-  private loadStore(): NewsStore {
+  private async loadStore(): Promise<NewsStore> {
     if (this.cache) return this.cache;
-    
-    if (!existsSync(STORE_PATH)) {
+
+    try {
+      await fs.access(STORE_PATH);
+    } catch {
       const empty: NewsStore = { articles: [], distributionJobs: [], lastUpdated: null };
-      writeFileSync(STORE_PATH, JSON.stringify(empty, null, 2));
+      await fs.writeFile(STORE_PATH, JSON.stringify(empty, null, 2));
       this.cache = empty;
       return empty;
     }
 
-    const data = readFileSync(STORE_PATH, "utf-8");
+    const data = await fs.readFile(STORE_PATH, "utf-8");
     this.cache = JSON.parse(data);
     return this.cache!;
   }
 
-  private saveStore(store: NewsStore): void {
+  private async saveStore(store: NewsStore): Promise<void> {
     store.lastUpdated = new Date().toISOString();
     this.cache = store;
-    writeFileSync(STORE_PATH, JSON.stringify(store, null, 2));
+    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2));
   }
 
   async upsertByExternalId(payload: Partial<NewsPost> & { externalId: string }): Promise<NewsPost> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const existing = store.articles.find(a => a.externalId === payload.externalId);
-    
+
     if (existing) {
       const updated = { ...existing, ...payload, updatedAt: new Date().toISOString() };
       const index = store.articles.findIndex(a => a.id === existing.id);
       store.articles[index] = updated;
-      this.saveStore(store);
+      await this.saveStore(store);
       return updated;
     }
 
@@ -184,9 +186,9 @@ export class FileNewsRepository implements INewsRepository {
   }
 
   async create(payload: Omit<NewsPost, "id" | "createdAt" | "updatedAt">): Promise<NewsPost> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const now = new Date().toISOString();
-    
+
     const post: NewsPost = {
       ...payload,
       id: generateId(),
@@ -195,99 +197,99 @@ export class FileNewsRepository implements INewsRepository {
     };
 
     store.articles.push(post);
-    this.saveStore(store);
+    await this.saveStore(store);
     return post;
   }
 
   async update(id: string, patch: Partial<NewsPost>): Promise<NewsPost | null> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const index = store.articles.findIndex(a => a.id === id);
-    
+
     if (index === -1) return null;
-    
-    const updated = { 
-      ...store.articles[index], 
-      ...patch, 
-      updatedAt: new Date().toISOString() 
+
+    const updated = {
+      ...store.articles[index],
+      ...patch,
+      updatedAt: new Date().toISOString()
     };
     store.articles[index] = updated;
-    this.saveStore(store);
+    await this.saveStore(store);
     return updated;
   }
 
   async getBySlug(slug: string): Promise<NewsPost | null> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     return store.articles.find(a => a.slug === slug) || null;
   }
 
   async getById(id: string): Promise<NewsPost | null> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     return store.articles.find(a => a.id === id) || null;
   }
 
   async list(options: ListOptions): Promise<{ items: NewsPost[]; total: number }> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     let items = [...store.articles];
-    
+
     if (options.status) {
       items = items.filter(a => a.status === options.status);
     }
-    
+
     if (options.tag) {
       items = items.filter(a => a.tags.includes(options.tag!));
     }
 
     items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
+
     const total = items.length;
     const offset = options.offset || 0;
     const limit = options.limit || 20;
-    
+
     items = items.slice(offset, offset + limit);
-    
+
     return { items, total };
   }
 
   async publish(id: string): Promise<NewsPost | null> {
-    return this.update(id, { 
-      status: "published", 
-      publishedAt: new Date().toISOString() 
+    return this.update(id, {
+      status: "published",
+      publishedAt: new Date().toISOString()
     });
   }
 
   async delete(id: string): Promise<boolean> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const index = store.articles.findIndex(a => a.id === id);
     if (index === -1) return false;
     store.articles.splice(index, 1);
-    this.saveStore(store);
+    await this.saveStore(store);
     return true;
   }
 
   async createDistributionJob(job: Omit<NewsDistributionJob, "id">): Promise<NewsDistributionJob> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const newJob: NewsDistributionJob = { ...job, id: generateId() };
     store.distributionJobs.push(newJob);
-    this.saveStore(store);
+    await this.saveStore(store);
     return newJob;
   }
 
   async updateDistributionJob(id: string, patch: Partial<NewsDistributionJob>): Promise<NewsDistributionJob | null> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const index = store.distributionJobs.findIndex(j => j.id === id);
     if (index === -1) return null;
     store.distributionJobs[index] = { ...store.distributionJobs[index], ...patch };
-    this.saveStore(store);
+    await this.saveStore(store);
     return store.distributionJobs[index];
   }
 
   async getDistributionJobs(postId: string): Promise<NewsDistributionJob[]> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     return store.distributionJobs.filter(j => j.postId === postId);
   }
 
   async getPendingJobs(): Promise<NewsDistributionJob[]> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     return store.distributionJobs.filter(j => j.status === "queued");
   }
 
@@ -300,9 +302,9 @@ export class FileNewsRepository implements INewsRepository {
     settings: Record<string, { enabled: boolean }>,
     siteUrl: string
   ): Promise<NewsDistributionJob[]> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const post = store.articles.find(a => a.id === postId);
-    
+
     if (!post) {
       throw new Error(`Post not found: ${postId}`);
     }
@@ -318,7 +320,7 @@ export class FileNewsRepository implements INewsRepository {
       );
 
       const utmUrl = `${siteUrl}/news/${post.slug}?utm_source=${platformId}&utm_medium=social&utm_campaign=news&utm_content=${post.slug}`;
-      
+
       const payload = {
         title: post.title,
         excerpt: post.excerpt,
@@ -330,7 +332,7 @@ export class FileNewsRepository implements INewsRepository {
 
       if (existingJob) {
         // Update existing job
-        const newStatus = setting.enabled 
+        const newStatus = setting.enabled
           ? (existingJob.status === "posted" || existingJob.status === "published" ? existingJob.status : "queued")
           : "disabled";
 
@@ -366,6 +368,7 @@ export class FileNewsRepository implements INewsRepository {
     }
 
     this.saveStore(store);
+    await this.saveStore(store);
     return result;
   }
 
@@ -373,7 +376,7 @@ export class FileNewsRepository implements INewsRepository {
    * Get queued jobs for n8n dispatch
    */
   async getQueuedJobs(options?: { limit?: number; platforms?: string[] }): Promise<NewsDistributionJob[]> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     let jobs = store.distributionJobs.filter(j => j.status === "queued");
 
     if (options?.platforms && options.platforms.length > 0) {
@@ -393,7 +396,7 @@ export class FileNewsRepository implements INewsRepository {
         store.distributionJobs[index].updatedAt = now;
       }
     }
-    this.saveStore(store);
+    await this.saveStore(store);
 
     return jobs;
   }
@@ -404,7 +407,7 @@ export class FileNewsRepository implements INewsRepository {
   async markJobsBatch(
     results: Array<{ id: string; status: string; remoteUrl?: string; error?: string }>
   ): Promise<NewsDistributionJob[]> {
-    const store = this.loadStore();
+    const store = await this.loadStore();
     const now = new Date().toISOString();
     const updated: NewsDistributionJob[] = [];
 
@@ -429,7 +432,7 @@ export class FileNewsRepository implements INewsRepository {
       updated.push(job);
     }
 
-    this.saveStore(store);
+    await this.saveStore(store);
     return updated;
   }
 }

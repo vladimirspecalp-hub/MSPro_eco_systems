@@ -5,11 +5,11 @@
  */
 
 import { getConfig } from './config';
-import { 
-  type EventType, 
+import {
+  type EventType,
   type AnalyticsEvent,
   generateSessionId,
-  getPageContext 
+  getPageContext
 } from './events';
 
 /**
@@ -18,11 +18,11 @@ import {
  */
 function pushToDataLayer(event: AnalyticsEvent): void {
   if (typeof window === 'undefined') return;
-  
+
   if (!(window as any).dataLayer) {
     (window as any).dataLayer = [];
   }
-  
+
   (window as any).dataLayer.push(event);
 }
 
@@ -49,13 +49,12 @@ async function sendToBackend(event: AnalyticsEvent): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type: event.event,
+        page: event.page?.path || window.location.pathname,
         sessionId: event.session.id,
-        eventType: event.event,
-        eventData: {
-          page: event.page,
-          meta: event.meta,
-          ts: event.ts
-        }
+        element: (event.meta as Record<string, unknown>)?.ctaId as string || undefined,
+        value: event.meta,
+        timestamp: new Date(event.ts).toISOString(),
       })
     });
   } catch (e) {
@@ -68,7 +67,7 @@ async function sendToBackend(event: AnalyticsEvent): Promise<void> {
  */
 function getGeoContext(): AnalyticsEvent['geo'] | undefined {
   if (typeof window === 'undefined') return undefined;
-  
+
   const geoData = (window as any).__MSPRO_GEO__;
   if (geoData) {
     return {
@@ -85,7 +84,7 @@ function getGeoContext(): AnalyticsEvent['geo'] | undefined {
  */
 function getABContext(): AnalyticsEvent['ab'] | undefined {
   if (typeof window === 'undefined') return undefined;
-  
+
   const abData = (window as any).__MSPRO_AB__;
   if (abData) {
     return {
@@ -112,7 +111,7 @@ export function track(
   meta?: Record<string, unknown>
 ): AnalyticsEvent {
   const config = getConfig();
-  
+
   const event: AnalyticsEvent = {
     event: eventType,
     ts: Date.now(),
@@ -124,17 +123,17 @@ export function track(
     ab: getABContext(),
     meta
   };
-  
+
   pushToDataLayer(event);
-  
+
   if (config.debug) {
     debugLog(event);
   }
-  
+
   if (config.enabled) {
     sendToBackend(event);
   }
-  
+
   return event;
 }
 
@@ -145,7 +144,7 @@ export function track(
  */
 export function trackPageView(path?: string, title?: string): AnalyticsEvent {
   const pageContext = getPageContext();
-  
+
   return track('page_view', {
     path: path || pageContext.path,
     title: title || pageContext.title

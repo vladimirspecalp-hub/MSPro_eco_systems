@@ -6,7 +6,7 @@
  * Специализация: нанесение огнезащиты (ОГЗ) и антикоррозионной защиты (АКЗ).
  */
 
-export type IntentType = 
+export type IntentType =
   | "default"
   | "price"
   | "urgent"
@@ -19,10 +19,11 @@ export type IntentType =
   | "anticorr"
   | "geo";
 
-export type ServiceType = 
+export type ServiceType =
   | "rope-access"
   | "fireproofing-at-height"
   | "anticorrosion-at-height"
+  | "demolition"
   | "default";
 
 export interface CopyVariables {
@@ -222,6 +223,7 @@ const SERVICE_NAMES: Record<ServiceType, string> = {
   "rope-access": "высотные работы промышленными альпинистами",
   "fireproofing-at-height": "огнезащита на высоте",
   "anticorrosion-at-height": "антикоррозионная защита на высоте",
+  "demolition": "демонтаж на высоте",
   "default": "промышленные высотные работы",
 };
 
@@ -397,7 +399,8 @@ const ANSWER_BLOCKS: Record<ServiceType, string> = {
   "rope-access": `MSPRO выполняет высотные работы промышленными альпинистами на промышленных объектах: огнезащиту и антикоррозионную защиту металлоконструкций на высоте. Мы организуем безопасный доступ, согласуем порядок работ с режимом предприятия и фиксируем результат по этапам — подготовка поверхности, нанесение покрытия, контроль параметров по ТЗ, исполнительная документация для приемки. Типовые объекты: ЛЭП, АМС и вышки связи, дымовые трубы (металл/ЖБ). Чтобы исключить спор «материал виноват или работы», заранее согласуем технологию, критерии приемки и формат контроля. Для расчёта достаточно ТЗ/ведомости или фото с параметрами объекта.`,
   "fireproofing-at-height": `Огнезащита на высоте нужна, когда конструкцию нельзя быстро снять/остановить или подойти техникой. MSPRO выполняет огнезащитную обработку металлоконструкций промышленными альпинистами на ЛЭП, АМС и вышках связи, дымовых трубах и промышленных металлоконструкциях. Мы согласуем порядок работ с режимом объекта, выполняем подготовку поверхности по ТЗ, наносим огнезащитный слой по выбранной системе и фиксируем результат по этапам. Чтобы приемка проходила без спорных моментов, заранее определяем критерии контроля и состав исполнительной документации, которые заказчик получит на сдаче.`,
   "anticorrosion-at-height": `Антикоррозионная защита на высоте требуется, когда конструкции работают в агрессивной среде и доступ к ним ограничен: ЛЭП, АМС/вышки связи, дымовые трубы и промышленные металлоконструкции. MSPRO выполняет АКЗ промышленными альпинистами: согласуем технологию, подготавливаем поверхность по ТЗ, наносим систему покрытий по этапам и фиксируем результат. Для приемки заранее определяем критерии контроля и состав исполнительной документации. Возможна работа на материале заказчика либо поставка материалов по согласованию — чтобы исключить споры между поставщиком и исполнителем, границы ответственности прописываются в договоре.`,
-  "default": `MSPRO — промышленный альпинизм для нанесения огнезащиты и антикоррозионной защиты металлоконструкций на высоте. Работаем на ЛЭП, АМС/вышках связи, дымовых трубах и промметаллоконструкциях. Организуем безопасный доступ, контроль технологии и исполнительную документацию для приемки.`,
+  "demolition": `Демонтаж на высоте промышленными альпинистами — это безопасный способ разбора конструкций там, где невозможно или опасно использовать тяжелую технику. MSPRO выполняет демонтаж металлоконструкций, дымовых труб, элементов АМС и рекламных сооружений. Мы разрабатываем план производства работ (ППР), организуем страховку и поэтапный спуск демонтированных частей. Это исключает риски для действующей инфраструктуры предприятия. Для оценки стоимости нам достаточно ТЗ, проекта или подробных фото с описанием объекта.`,
+  "default": `MSPRO — промышленный альпинизм для нанесения огнезащиты и антикоррозионной защиты металлоконструкций на высоте. Работаем на ЛЭП, АМС/вышках связи, дымовых трубах и промметаллоконструкциях. Организуем безопасный доступ, контроль технологии и исполнительную документации для приемки.`,
 };
 
 export const CREDENTIALS = {
@@ -428,11 +431,13 @@ export const FORM_MICROCOPY = {
 };
 
 export const NAV_ITEMS = [
-  { name: "Услуги", href: "/services/rope-access", submenu: [
-    { name: "Высотные работы", href: "/services/rope-access" },
-    { name: "ОГЗ на высоте", href: "/services/fireproofing-at-height" },
-    { name: "АКЗ на высоте", href: "/services/anticorrosion-at-height" },
-  ]},
+  {
+    name: "Услуги", href: "/services/rope-access", submenu: [
+      { name: "Высотные работы", href: "/services/rope-access" },
+      { name: "ОГЗ на высоте", href: "/services/fireproofing-at-height" },
+      { name: "АКЗ на высоте", href: "/services/anticorrosion-at-height" },
+    ]
+  },
   { name: "Объекты", href: "#objects" },
   { name: "Документы", href: "/documents" },
   { name: "Калькулятор", href: "/calculator" },
@@ -458,7 +463,7 @@ function extractCityFromQuery(query: string): string | null {
 
 export function getIntentFromKeywords(query: string): IntentType {
   const lowerQuery = query.toLowerCase();
-  
+
   if (/цена|стоимость|сколько стоит|расценки|смета|бюджет/.test(lowerQuery)) {
     return "price";
   }
@@ -486,18 +491,18 @@ export function getIntentFromKeywords(query: string): IntentType {
   if (/антикорроз|акз|ржав|коррозия|покрас/.test(lowerQuery)) {
     return "anticorr";
   }
-  
+
   const city = extractCityFromQuery(query);
   if (city) {
     return "geo";
   }
-  
+
   return "default";
 }
 
 function resolveTemplate(template: string, variables: CopyVariables): string {
   let result = template;
-  
+
   if (variables.service) {
     result = result.replace(/{service}/g, variables.service);
   }
@@ -510,19 +515,19 @@ function resolveTemplate(template: string, variables: CopyVariables): string {
   if (variables.region) {
     result = result.replace(/{region}/g, variables.region);
   }
-  
+
   result = result.replace(/{service}/g, "промышленные работы");
   result = result.replace(/{objectType}/g, "объекта");
   result = result.replace(/{city}/g, "вашем городе");
   result = result.replace(/{region}/g, "вашем регионе");
-  
+
   return result;
 }
 
 export function resolveCopy(variables: CopyVariables = {}): CopyResult {
   let intent: IntentType = variables.intent || "default";
   let city = variables.city;
-  
+
   if (variables.query) {
     const detectedIntent = getIntentFromKeywords(variables.query);
     if (detectedIntent !== "default") {
@@ -533,33 +538,33 @@ export function resolveCopy(variables: CopyVariables = {}): CopyResult {
       city = extractedCity;
     }
   }
-  
+
   const heroVariant = HERO_VARIANTS[intent] || HERO_VARIANTS.default;
   const serviceName = variables.service || SERVICE_NAMES.default;
   const serviceType: ServiceType = "default";
-  
+
   const resolvedVariables: CopyVariables = {
     ...variables,
     city,
     service: serviceName,
   };
-  
+
   const h1 = resolveTemplate(heroVariant.h1, resolvedVariables);
   const subhead = resolveTemplate(heroVariant.subhead, resolvedVariables);
   const offer = resolveTemplate(OFFERS[intent] || OFFERS.default, resolvedVariables);
-  
+
   const title = `${serviceName} | MSPRO — промышленный альпинизм`;
   const description = `${serviceName}: высотные работы промальпинистами на ЛЭП, АМС, дымовых трубах. Лицензия МЧС, СРО. Контроль качества и исполнительная документация.`;
-  
+
   const bullets = heroVariant.bullets.map(b => resolveTemplate(b, resolvedVariables));
   const ctaLabel = resolveTemplate(heroVariant.ctaLabel, resolvedVariables);
   const ctaMicrocopy = resolveTemplate(heroVariant.ctaMicrocopy, resolvedVariables);
   const ctaSecondaryLabel = resolveTemplate(heroVariant.ctaSecondaryLabel, resolvedVariables);
   const ctaSecondaryMicrocopy = resolveTemplate(heroVariant.ctaSecondaryMicrocopy, resolvedVariables);
-  
+
   const faq = FAQ_BY_INTENT[intent] || FAQ_DEFAULT;
   const answerBlock = ANSWER_BLOCKS[serviceType] || ANSWER_BLOCKS.default;
-  
+
   return {
     title,
     description,

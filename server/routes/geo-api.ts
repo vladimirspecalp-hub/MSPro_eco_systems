@@ -32,7 +32,7 @@ const router = Router();
 router.get('/context', (req, res) => {
   try {
     const context = resolveGeoContext(req);
-    
+
     res.json({
       region: context.region,
       source: context.source,
@@ -58,12 +58,12 @@ router.get('/context', (req, res) => {
 router.get('/regions', (req, res) => {
   try {
     let regions = getAllRegions();
-    
+
     const priority = req.query.priority as 'high' | 'medium' | 'low' | undefined;
     if (priority) {
       regions = regions.filter(r => r.priority === priority);
     }
-    
+
     res.json({
       count: regions.length,
       regions,
@@ -85,7 +85,7 @@ router.get('/region/:code', (req, res) => {
   try {
     const { code } = req.params;
     const region = GEO_REGIONS[code.toLowerCase()];
-    
+
     if (!region) {
       return res.status(404).json({
         error: 'Region not found',
@@ -93,7 +93,7 @@ router.get('/region/:code', (req, res) => {
         available: Object.keys(GEO_REGIONS).filter((k, i, arr) => arr.indexOf(k) === i),
       });
     }
-    
+
     res.json(region);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -115,7 +115,7 @@ router.get('/localize', (req, res) => {
     const regionCode = req.query.region as string | undefined;
     const context = resolveGeoContext(req);
     const region = regionCode ? getRegionByCode(regionCode) : context.region;
-    
+
     const localized = {
       region: region,
       cta: {
@@ -133,7 +133,7 @@ router.get('/localize', (req, res) => {
         description: `Покраска труб и антикоррозийная защита в ${region.nameGenitive}. Гарантия 20 лет. MSPRO Quad.`,
       },
     };
-    
+
     res.json(localized);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -153,8 +153,8 @@ function getRegionalPhone(regionCode: string): string {
     nsk: '+7 (383) 123-45-67',
     kazan: '+7 (843) 123-45-67',
   };
-  
-  return phones[regionCode] || '+7 (800) 555-35-35';
+
+  return phones[regionCode] || '+7 (987) 909-29-38';
 }
 
 export default router;

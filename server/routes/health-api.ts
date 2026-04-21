@@ -45,7 +45,6 @@ router.get('/', async (req, res) => {
   services.geo = checkGEOService();
   services.aeo = checkAEOService();
   services.ux = checkUXService();
-  services.database = await checkDatabaseService();
 
   const summary = calculateSummary(services);
   const overallStatus = determineOverallStatus(summary);
@@ -68,9 +67,9 @@ router.get('/', async (req, res) => {
  * Быстрая проверка (для k8s liveness probe)
  */
 router.get('/live', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString() 
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -80,9 +79,9 @@ router.get('/live', (req, res) => {
  */
 router.get('/ready', async (req, res) => {
   try {
-    const stats = getSEOStats();
+    const stats = await getSEOStats();
     const isReady = stats.totalPages > 0;
-    
+
     if (isReady) {
       res.json({ status: 'ready', seoPages: stats.totalPages });
     } else {
@@ -123,14 +122,14 @@ router.get('/api-status', (req, res) => {
 
 async function checkSEOService(): Promise<ServiceHealth> {
   try {
-    const stats = getSEOStats();
-    
+    const stats = await getSEOStats();
+
     if (stats.totalPages === 0) {
       return { status: 'warning', message: 'No SEO pages loaded', details: stats };
     }
-    
-    return { 
-      status: 'ok', 
+
+    return {
+      status: 'ok',
       message: `${stats.totalPages} pages loaded`,
       details: { pageCount: stats.totalPages, ...stats }
     };
@@ -142,8 +141,8 @@ async function checkSEOService(): Promise<ServiceHealth> {
 function checkGEOService(): ServiceHealth {
   try {
     const regions = getAllRegions();
-    return { 
-      status: 'ok', 
+    return {
+      status: 'ok',
       message: `${regions.length} regions configured`,
       details: { regionCount: regions.length }
     };
@@ -154,17 +153,17 @@ function checkGEOService(): ServiceHealth {
 
 function checkAEOService(): ServiceHealth {
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
-  
+
   if (!hasOpenAI) {
-    return { 
-      status: 'warning', 
+    return {
+      status: 'warning',
       message: 'OpenAI API key not configured, using fallback FAQ',
       details: { aiEnabled: false }
     };
   }
-  
-  return { 
-    status: 'ok', 
+
+  return {
+    status: 'ok',
     message: 'AI generation enabled',
     details: { aiEnabled: true, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' }
   };
@@ -174,11 +173,11 @@ function checkUXService(): ServiceHealth {
   try {
     const experiments = getAllExperiments();
     const metrics = getCROMetrics();
-    
-    return { 
-      status: 'ok', 
+
+    return {
+      status: 'ok',
       message: `${experiments.length} experiments active`,
-      details: { 
+      details: {
         experimentCount: experiments.length,
         totalSessions: metrics.totalSessions,
         totalEvents: metrics.totalEvents
@@ -189,23 +188,6 @@ function checkUXService(): ServiceHealth {
   }
 }
 
-async function checkDatabaseService(): Promise<ServiceHealth> {
-  const hasDbUrl = !!process.env.DATABASE_URL;
-  
-  if (!hasDbUrl) {
-    return { 
-      status: 'warning', 
-      message: 'DATABASE_URL not configured',
-      details: { connected: false }
-    };
-  }
-  
-  return { 
-    status: 'ok', 
-    message: 'Database URL configured',
-    details: { connected: true }
-  };
-}
 
 function calculateSummary(services: Record<string, ServiceHealth>): HealthSummary {
   const values = Object.values(services);
