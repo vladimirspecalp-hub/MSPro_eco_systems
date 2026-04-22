@@ -10,7 +10,6 @@ import { resolve, join, extname } from "path";
 import multer from "multer";
 import seoApiRouter from "./routes/seo-api";
 import geoApiRouter from "./routes/geo-api";
-import aeoApiRouter from "./routes/aeo-api";
 import uxApiRouter from "./routes/ux-api";
 import healthApiRouter from "./routes/health-api";
 import newsApiRouter from "./routes/news-api";
@@ -42,8 +41,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GEO API v3.0
   app.use("/api/geo", geoApiRouter);
 
-  // AEO API v3.0
-  app.use("/api/aeo", aeoApiRouter);
+  // AEO API removed 2026-04-21 — использовал OpenAI, нейросетевые API на сайте запрещены.
+  // Возвращаем 410 Gone чтобы внешние клиенты поняли что эндпоинт удалён навсегда.
+  app.all("/api/aeo/*", (_req, res) => res.status(410).json({ error: "Gone: AEO API removed" }));
 
   // UX Personalization API v3.0
   app.use("/api/ux", uxApiRouter);
