@@ -108,13 +108,22 @@ export function serveStatic(app: Express) {
 
     const { html: ssrMeta, statusCode } = await generateSSRMeta(req.originalUrl, req.geoContext);
     html = html.replace('</head>', `    ${ssrMeta}\n  </head>`);
-    res.status(statusCode)
-      .set({
-        "Content-Type": "text/html",
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0"
-      })
-      .end(html);
+
+    const url = req.originalUrl;
+    const isDynamic = url.startsWith('/api/') || url.startsWith('/admin/');
+    const is404 = statusCode === 404;
+
+    const cacheControl = (isDynamic || is404)
+      ? "no-store, no-cache, must-revalidate"
+      : "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400";
+
+    const headers: Record<string, string> = {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": cacheControl,
+      "Vary": "Accept-Encoding",
+      "X-Content-Type-Options": "nosniff",
+    };
+
+    res.status(statusCode).set(headers).end(html);
   });
 }

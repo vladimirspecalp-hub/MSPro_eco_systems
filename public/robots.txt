@@ -4,11 +4,22 @@ Disallow: /api/
 Disallow: /admin/
 Disallow: /private/
 
-# AI Bots (Explicitly Allow for AIO)
+# Yandex — Clean-param для UTM и трекинговых параметров
+User-agent: Yandex
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /private/
+Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&gclid&yclid&fbclid&ref /
+
+# AI Bots (Explicitly Allow for AIO/GEO)
 User-agent: GPTBot
 Allow: /
 
 User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
 Allow: /
 
 User-agent: CCBot
@@ -17,7 +28,22 @@ Allow: /
 User-agent: anthropic-ai
 Allow: /
 
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
 User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: YandexGPT
 Allow: /
 
 # Sitemap

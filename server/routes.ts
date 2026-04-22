@@ -4,7 +4,6 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertCalculationSchema } from "@shared/schema";
-import { generatePageContent } from "./services/ai_seo";
 import { getPageBySlug, getRelatedPages, getAllFAQs, getSEOStats, invalidateSEOCache } from "./services/seo-service";
 import { promises as fs, existsSync, mkdirSync } from "fs";
 import { resolve, join, extname } from "path";
@@ -16,6 +15,7 @@ import uxApiRouter from "./routes/ux-api";
 import healthApiRouter from "./routes/health-api";
 import newsApiRouter from "./routes/news-api";
 import sitemapApiRouter from "./routes/sitemap-api";
+import knowledgeApiRouter from "./routes/knowledge-api";
 import { geoContextMiddleware } from "./middleware/geo-context";
 import { sendLeadNotification } from "./services/notification";
 
@@ -50,6 +50,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health Check API v3.0
   app.use("/api/health", healthApiRouter);
+
+  // Knowledge Base API (ручные экспертные материалы)
+  app.use("/api/knowledge", knowledgeApiRouter);
 
   // Price Guides API v1.0
   app.get("/api/price-guides/:slug", async (req, res) => {
@@ -305,45 +308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(existingEntry);
       }
 
-      // If not found, try to generate (slow path)
-      const keyword = slug;
-      const content = await generatePageContent(keyword);
-
-      const dynamicPath = resolve(process.cwd(), 'content', 'seo_dynamic.json');
-      let dynamicData: any[] = [];
-
-      try {
-        const fileContent = await fs.readFile(dynamicPath, 'utf-8');
-        dynamicData = JSON.parse(fileContent);
-      } catch (e) {
-        dynamicData = [];
-      }
-
-      const newEntry = {
-        slug,
-        title: content.title,
-        description: content.description,
-        h1: content.h1,
-        h2: content.h2,
-        keywords: content.keywords,
-        cta: "Рассчитать стоимость",
-        region: "Москва и область",
-        faq: content.faq
-      };
-
-      const existingIndex = dynamicData.findIndex((e: any) => e.slug === slug);
-      if (existingIndex >= 0) {
-        dynamicData[existingIndex] = newEntry;
-      } else {
-        dynamicData.push(newEntry);
-      }
-
-      await fs.writeFile(dynamicPath, JSON.stringify(dynamicData, null, 2), 'utf-8');
-
-      // Invalidate cache so new page is found next time
-      invalidateSEOCache();
-
-      res.json(newEntry);
+      // AI-fallback deprecated (2026-04-21): automatic page generation is turned off.
+      // If page not found in existing data → 404. New pages are authored manually.
+      return res.status(404).json({ error: "Page not found", slug });
     } catch (error: any) {
       console.error("SEO API Error:", error);
       res.status(500).json({ error: error.message });

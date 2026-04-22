@@ -14,12 +14,31 @@ export async function generateSitemapXml(): Promise<string> {
         "/calculator",
         "/mspro-quad",
         "/news",
+        "/faq",
+        "/prices",
+        "/documents",
+        "/knowledge",
+        "/company/team",
         "/services/rope-access",
         "/services/fireproofing-at-height",
         "/services/anticorrosion-at-height",
         "/services/ceiling-sanation",
         "/services/demolition"
     ];
+
+    // Knowledge articles (опубликованные вручную)
+    try {
+        const knowledgeIndexPath = resolve(process.cwd(), "content", "knowledge", "index.json");
+        const raw = await fs.readFile(knowledgeIndexPath, "utf-8");
+        const idx = JSON.parse(raw);
+        if (Array.isArray(idx?.articles)) {
+            idx.articles.forEach((a: { slug: string }) => {
+                if (a?.slug) staticUrls.push(`/knowledge/${a.slug}`);
+            });
+        }
+    } catch (e) {
+        console.warn("[Sitemap] knowledge index not loaded:", (e as Error).message);
+    }
 
     const now = new Date().toISOString().split("T")[0];
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;

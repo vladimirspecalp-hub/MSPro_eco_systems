@@ -27,6 +27,8 @@ import AdminLeads from "@/pages/AdminLeads";
 import PriceGuide from "@/pages/PriceGuide";
 import PricesPage from "@/pages/PricesPage";
 import TeamPage from "@/pages/company/TeamPage";
+import Knowledge from "@/pages/Knowledge";
+import KnowledgeArticle from "@/pages/KnowledgeArticle";
 import NotFound from "@/pages/not-found";
 import { initAnalytics, useSpaPageView, initEventDelegation } from "@/modules/analytics";
 
@@ -52,6 +54,8 @@ function Router() {
       <Route path="/price-guide/:slug" component={PriceGuide} />
       <Route path="/prices" component={PricesPage} />
       <Route path="/company/team" component={TeamPage} />
+      <Route path="/knowledge" component={Knowledge} />
+      <Route path="/knowledge/:slug" component={KnowledgeArticle} />
       <Route path="/:slug" component={SEOPage} />
       <Route component={NotFound} />
     </Switch>

@@ -6,7 +6,6 @@
 import { promises as fs } from 'fs';
 import { resolve } from 'path';
 import { CITY_CONTENT, getBenefitsForSlug, getFAQForSlug } from "../data/city-content";
-import { generatePageContent } from "./ai_seo";
 
 /**
  * Структура SEO-записи страницы
