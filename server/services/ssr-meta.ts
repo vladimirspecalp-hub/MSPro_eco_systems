@@ -56,6 +56,8 @@ type PageType =
     | { type: 'news-article'; slug: string }
     | { type: 'prices' }
     | { type: 'company-team' }
+    | { type: 'knowledge' }
+    | { type: 'knowledge-article'; slug: string }
     | { type: 'other'; path: string };
 
 // ─── Роутинг ────────────────────────────────────────────────────────────────
@@ -72,6 +74,10 @@ function resolvePageType(url: string): PageType {
     if (path === '/company/team') return { type: 'company-team' };
     if (path === '/mspro-quad') return { type: 'mspro-quad' };
     if (path === '/news') return { type: 'news' };
+    if (path === '/knowledge') return { type: 'knowledge' };
+
+    const knowledgeMatch = path.match(/^\/knowledge\/(.+)$/);
+    if (knowledgeMatch) return { type: 'knowledge-article', slug: knowledgeMatch[1] };
 
     const newsMatch = path.match(/^\/news\/(.+)$/);
     if (newsMatch) return { type: 'news-article', slug: newsMatch[1] };
@@ -296,6 +302,10 @@ const STATIC_PAGES: Record<string, { title: string; description: string }> = {
         title: 'Команда MS-PRO — Эксперты по высоте и АКЗ',
         description: 'Руководство, инженеры и альпинисты компании MS-PRO. Квалифицированные специалисты с допусками и опытом работы на сложных промышленных объектах.',
     },
+    knowledge: {
+        title: 'База знаний MS-PRO — Гайды, стандарты, расчёты АКЗ и огнезащиты',
+        description: 'Экспертные материалы по антикоррозионной защите, огнезащите, промышленному альпинизму. Разбор ГОСТ, СНиП и технологий нанесения покрытий.',
+    },
 };
 
 // Named service pages
@@ -471,6 +481,32 @@ async function resolvePageMeta(pageType: PageType, region?: GeoRegion): Promise<
                 { name: 'Новости', url: `${ORG.url}/news` },
             ]));
             return { title, description: STATIC_PAGES.news.description, schemas, statusCode: 200 };
+        }
+
+        case 'knowledge': {
+            const s = STATIC_PAGES.knowledge;
+            schemas.push(buildBreadcrumbSchema([
+                { name: 'Главная', url: ORG.url },
+                { name: 'База знаний', url: `${ORG.url}/knowledge` },
+            ]));
+            schemas.push(buildWebPageSchema('/knowledge', s.title, s.description, undefined, undefined, true));
+            return { title: s.title, description: s.description, schemas, statusCode: 200 };
+        }
+
+        case 'knowledge-article': {
+            // Статьи пишутся вручную; мета берётся из content/knowledge/articles/:slug.json при наличии.
+            // На старте раздел пустой — возвращаем 404 для несуществующих статей (no soft-200 для пустого).
+            const title = 'Статья не найдена — База знаний MS-PRO';
+            schemas.push(buildBreadcrumbSchema([
+                { name: 'Главная', url: ORG.url },
+                { name: 'База знаний', url: `${ORG.url}/knowledge` },
+            ]));
+            return {
+                title,
+                description: 'Запрашиваемая статья не найдена. Перейти в базу знаний.',
+                schemas,
+                statusCode: 404,
+            };
         }
 
         case 'seo': {
