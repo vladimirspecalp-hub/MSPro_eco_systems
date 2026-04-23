@@ -1,0 +1,20 @@
+{
+  "_comment": "301-редиректы. Ключ = старый URL (без домена, со слэша). Значение = целевой путь или полный URL. Меняется без пересборки — читается при каждом запросе.",
+  "_updated": "2026-04-22",
+
+  "/uslugi/malyarnye-raboty/pokraska-kryshi-doma": "/services/anticorrosion-at-height",
+  "/uslugi/malyarnye-raboty/mekhanizirovannaya-pokraska": "/services/anticorrosion-at-height",
+  "/uslugi/malyarnye-raboty": "/services/anticorrosion-at-height",
+  "/uslugi/remont-i-pokraska-dymovykh-trub": "/services/anticorrosion-at-height",
+  "/uslugi/obsluzhivanie-lep-i-ams/ochistka-ot-lkp": "/services/anticorrosion-at-height",
+
+  "/uslugi/vysotnye-raboty/svarochnye-raboty-na-vysote": "/services/rope-access",
+  "/uslugi/vysotnye-raboty": "/services/rope-access",
+  "/uslugi/obsluzhivanie-lep-i-ams": "/services/rope-access",
+  "/uslugi/takelazhnye-raboty": "/services/rope-access",
+
+  "_prefix_redirects": {
+    "_comment": "Fallback: любой /uslugi/* без точного совпадения → /services/ (каталог услуг)",
+    "/uslugi/": "/services/"
+  }
+}

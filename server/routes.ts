@@ -16,6 +16,7 @@ import newsApiRouter from "./routes/news-api";
 import sitemapApiRouter from "./routes/sitemap-api";
 import knowledgeApiRouter from "./routes/knowledge-api";
 import { geoContextMiddleware } from "./middleware/geo-context";
+import { redirectsMiddleware } from "./middleware/redirects";
 import { sendLeadNotification } from "./services/notification";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -31,6 +32,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) next(); // file not found → fall through to SPA catch-all
     });
   });
+
+  // 301-редиректы (старый сайт /uslugi/* → новый /services/*) — до всего остального
+  app.use(redirectsMiddleware());
 
   // GEO Context Middleware (добавляет req.geoContext ко всем запросам)
   app.use(geoContextMiddleware);
