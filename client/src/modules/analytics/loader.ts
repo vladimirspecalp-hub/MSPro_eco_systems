@@ -35,6 +35,8 @@ function loadGTM(gtmId: string): void {
  */
 function loadGA4(gaTagId: string): void {
   if (document.getElementById('ga4-script')) return;
+  // Skip if inline gtag уже загружен в index.html (безопаснее, чем React-инициализация)
+  if (typeof (window as any).gtag === 'function') return;
 
   const script = document.createElement('script');
   script.id = 'ga4-script';
@@ -58,6 +60,8 @@ function loadGA4(gaTagId: string): void {
  */
 function loadYM(ymTagId: string): void {
   if (document.getElementById('ym-script')) return;
+  // Skip if inline ym уже загружен в index.html
+  if (typeof (window as any).ym === 'function') return;
 
   const script = document.createElement('script');
   script.id = 'ym-script';
