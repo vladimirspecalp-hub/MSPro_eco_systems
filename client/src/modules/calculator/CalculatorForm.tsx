@@ -187,7 +187,7 @@ export function CalculatorForm() {
         baseDays,
         optimisticDays,
         chimneyMaterialLabel: selectedService === "chimney_painting" ? CHIMNEY_MATERIALS[chimneyMaterial].label : undefined,
-        surfacePrepLabel: selectedService === "chimney_painting" ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
+        surfacePrepLabel: (selectedService === "chimney_painting" || selectedService === "anticorrosion") ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
         anticorrosionTypeLabel: selectedService === "anticorrosion" ? ANTICORROSION_TYPES[anticorrosionType].label : undefined,
       };
 
@@ -334,27 +334,50 @@ export function CalculatorForm() {
               </div>
             )}
 
-            {/* Anticorrosion type subsection */}
+            {/* Anticorrosion subsections */}
             {selectedService === "anticorrosion" && (
-              <div className="space-y-2 p-4 bg-muted/20 rounded-lg border">
-                <Label>Тип конструкции</Label>
-                <ToggleGroup
-                  type="single"
-                  value={anticorrosionType}
-                  onValueChange={(v) => v && setAnticorrosionType(v as AnticorrosionType)}
-                  variant="outline"
-                  className="grid grid-cols-3 gap-2"
-                >
-                  {(Object.entries(ANTICORROSION_TYPES) as [AnticorrosionType, { label: string }][]).map(([id, { label }]) => (
-                    <ToggleGroupItem
-                      key={id}
-                      value={id}
-                      className="w-full h-auto py-2 whitespace-normal text-center leading-snug data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                    >
-                      {label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+              <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+                <div className="space-y-2">
+                  <Label>Тип конструкции</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={anticorrosionType}
+                    onValueChange={(v) => v && setAnticorrosionType(v as AnticorrosionType)}
+                    variant="outline"
+                    className="grid grid-cols-3 gap-2"
+                  >
+                    {(Object.entries(ANTICORROSION_TYPES) as [AnticorrosionType, { label: string }][]).map(([id, { label }]) => (
+                      <ToggleGroupItem
+                        key={id}
+                        value={id}
+                        className="w-full h-auto py-2 whitespace-normal text-center leading-snug data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        {label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+                <div className="space-y-2">
+                  <Label>Подготовка поверхности</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={surfacePrep}
+                    onValueChange={(v) => v && setSurfacePrep(v as SurfacePrep)}
+                    variant="outline"
+                    className="grid grid-cols-3 gap-2"
+                  >
+                    {(Object.entries(SURFACE_PREP_OPTIONS) as [SurfacePrep, { label: string; description: string }][]).map(([id, { label, description }]) => (
+                      <ToggleGroupItem
+                        key={id}
+                        value={id}
+                        className="w-full h-auto py-2.5 flex-col gap-0.5 whitespace-normal text-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        <span className="font-semibold text-sm">{label}</span>
+                        <span className="text-xs font-normal opacity-70">{description}</span>
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
               </div>
             )}
 
