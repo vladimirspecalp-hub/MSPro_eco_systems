@@ -1,14 +1,16 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calculator, Check, ChevronsUpDown } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calculator, Check, ChevronsUpDown, Info } from "lucide-react";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
-import { CALCULATOR_DATA, SERVICE_TYPES } from "@/lib/calculator-data";
+import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId } from "@/lib/calculator-data";
 import { cn } from "@/lib/utils";
 import {
   Command,
@@ -32,9 +34,12 @@ interface CalculationResult {
   region: string;
   hazards: string[];
   estimatedCost: number;
+  costMin: number;
+  costMax: number;
   laborCost: number;
   materialCost: number;
   materialName: string | null;
+  coatingIsPending: boolean;
 }
 
 
@@ -43,7 +48,7 @@ export function CalculatorForm() {
   const [selectedService, setSelectedService] = useState(SERVICE_TYPES[0].id);
   const [selectedRegion, setSelectedRegion] = useState(CALCULATOR_DATA.regions[0].name);
   const [selectedHazards, setSelectedHazards] = useState<string[]>([]);
-  const [selectedCoating, setSelectedCoating] = useState<string>("");
+  const [selectedTier, setSelectedTier] = useState<TierId>("standard");
   const [openRegion, setOpenRegion] = useState(false);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -57,16 +62,12 @@ export function CalculatorForm() {
     [selectedService]
   );
 
-  // Reset or Default Coating when Service changes
-  useMemo(() => {
-    if (currentService.coatingOptions && currentService.coatingOptions.length > 0) {
-      if (!currentService.coatingOptions.find(c => c.id === selectedCoating)) {
-        setSelectedCoating(currentService.coatingOptions[0].id);
-      }
-    } else {
-      setSelectedCoating("");
-    }
-  }, [currentService, selectedCoating]);
+  // Reset tier to "standard" when service changes
+  useEffect(() => {
+    const hasStandard = currentService.coatingTiers.some(t => t.tierId === "standard");
+    if (currentService.coatingTiers.length === 0) return;
+    setSelectedTier(hasStandard ? "standard" : currentService.coatingTiers[0].tierId);
+  }, [currentService.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const handleFormInteraction = () => {
@@ -120,15 +121,16 @@ export function CalculatorForm() {
 
       // 3. Material Cost Calculation (No coefficients applied)
       let materialCost = 0;
-      let materialName = null;
-      let materialPrice = 0;
+      let materialName: string | null = null;
+      let coatingIsPending = false;
 
-      if (currentService.coatingOptions && selectedCoating) {
-        const coating = currentService.coatingOptions.find(c => c.id === selectedCoating);
-        if (coating) {
-          materialPrice = coating.price;
-          materialCost = surfaceArea * materialPrice;
-          materialName = coating.label;
+      if (currentService.coatingTiers.length > 0) {
+        const tier = currentService.coatingTiers.find(t => t.tierId === selectedTier);
+        if (tier) {
+          const meta = COATING_TIER_META[tier.tierId];
+          materialName = tier.systemName ? `${meta.label}: ${tier.systemName}` : meta.label;
+          coatingIsPending = tier.pricePerSqm === null;
+          materialCost = tier.pricePerSqm !== null ? surfaceArea * tier.pricePerSqm : 0;
         }
       }
 
@@ -143,6 +145,8 @@ export function CalculatorForm() {
         region: selectedRegion,
         hazards: selectedHazards.map(code => CALCULATOR_DATA.hazards.find(h => h.code === code)?.description || code),
         estimatedCost: parseFloat(totalCost.toFixed(2)),
+        costMin: Math.round(totalCost * 0.85),
+        costMax: Math.round(totalCost * 1.15),
         // Store breakdown details in result for UI
         laborCost: parseFloat(laborCost.toFixed(2)),
         materialCost: parseFloat(materialCost.toFixed(2)),
@@ -170,7 +174,7 @@ export function CalculatorForm() {
       result.materialName ? `Материал: ${result.materialName} (${result.materialCost.toLocaleString('ru-RU')} ₽)` : null,
       `Работа: ${result.laborCost.toLocaleString('ru-RU')} ₽`,
       result.hazards.length > 0 ? `Факторы: ${result.hazards.join(", ")}` : null,
-      `Итого: ${result.estimatedCost.toLocaleString('ru-RU')} ₽`
+      `Ориентировочная стоимость: ${result.costMin.toLocaleString('ru-RU')} – ${result.costMax.toLocaleString('ru-RU')} ₽ (±15%)`
     ].filter(Boolean).join("\n");
 
     const params = new URLSearchParams();
@@ -279,21 +283,64 @@ export function CalculatorForm() {
             )}
 
             <div className="space-y-3">
-              <Label>Усложняющие факторы (влияют на стоимость работ)</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border p-4 rounded-lg">
-                {CALCULATOR_DATA.hazards.map((hazard) => (
-                  <div key={hazard.code} className="flex items-start space-x-2">
-                    <Checkbox id={hazard.code} checked={selectedHazards.includes(hazard.code)} onCheckedChange={() => toggleHazard(hazard.code)} />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label htmlFor={hazard.code} className="text-sm cursor-pointer">{hazard.description}</Label>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2">
+                <Label>Усложняющие факторы (влияют на стоимость работ)</Label>
+                {selectedHazards.length > 0 && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                    {selectedHazards.length} выбрано
+                  </span>
+                )}
+              </div>
+              <div className="border rounded-lg overflow-hidden">
+                <Accordion type="multiple" className="w-full">
+                  {Object.entries(
+                    CALCULATOR_DATA.hazards.reduce<Record<string, typeof CALCULATOR_DATA.hazards>>((acc, h) => {
+                      if (!acc[h.group]) acc[h.group] = [];
+                      acc[h.group].push(h);
+                      return acc;
+                    }, {})
+                  ).map(([group, factors]) => {
+                    const selectedInGroup = factors.filter(f => selectedHazards.includes(f.code)).length;
+                    return (
+                      <AccordionItem key={group} value={group} className="border-b last:border-b-0">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/30 text-sm font-medium">
+                          <span className="flex items-center gap-2">
+                            {group}
+                            {selectedInGroup > 0 && (
+                              <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full leading-none">
+                                {selectedInGroup}
+                              </span>
+                            )}
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-0">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 px-4 py-3 bg-muted/10">
+                            {factors.map((hazard) => (
+                              <div key={hazard.code} className="flex items-start space-x-2">
+                                <Checkbox
+                                  id={hazard.code}
+                                  checked={selectedHazards.includes(hazard.code)}
+                                  onCheckedChange={() => toggleHazard(hazard.code)}
+                                />
+                                <div className="grid gap-0.5 leading-none">
+                                  <Label htmlFor={hazard.code} className="text-sm cursor-pointer leading-tight">
+                                    {hazard.description}
+                                  </Label>
+                                  <span className="text-xs text-muted-foreground">×{hazard.value.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
               </div>
             </div>
 
             <Button type="submit" className="w-full text-lg h-12" disabled={isCalculating}>
-              {isCalculating ? "Считаем..." : "Рассчитать точную стоимость"}
+              {isCalculating ? "Считаем..." : "Рассчитать стоимость"}
             </Button>
           </form>
         </CardContent>
@@ -328,9 +375,21 @@ export function CalculatorForm() {
               </div>
 
               <div className="bg-muted p-3 rounded-md">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Сложность (Работа)</p>
+                <div className="flex items-center gap-1 mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Сложность (Работа)</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-xs">
+                        Коэффициенты перемножаются по методике компании. Итоговый множитель уточнит инженер.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 {/* Back-calculate labor complexity factor for display */}
-                <p className="text-xl font-semibold">x{((result.laborCost / (result.surfaceArea * currentService.baseRate * (CALCULATOR_DATA.regions.find(r => r.name === result.region)?.value || 1))) || 1.0).toFixed(2)}</p>
+                <p className="text-xl font-semibold">×{((result.laborCost / (result.surfaceArea * currentService.baseRate * (CALCULATOR_DATA.regions.find(r => r.name === result.region)?.value || 1))) || 1.0).toFixed(2)}</p>
               </div>
             </div>
 
@@ -362,16 +421,20 @@ export function CalculatorForm() {
             <div className="pt-4 flex flex-col items-center gap-4 bg-accent/5 p-4 rounded-lg mt-4">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">Ориентировочная стоимость под ключ</p>
-                <p className="text-4xl font-extrabold text-primary">
-                  {result.estimatedCost.toLocaleString('ru-RU')} ₽
+                <p className="text-3xl font-extrabold text-primary">
+                  {result.costMin.toLocaleString('ru-RU')} – {result.costMax.toLocaleString('ru-RU')} ₽
                 </p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">±15%</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full font-medium">уточнит инженер</span>
+                </div>
               </div>
 
               <Button size="lg" className="w-full md:w-auto px-8 animate-pulse hover:animate-none" onClick={handleGetProposal}>
                 Отправить заявку на эту смету
               </Button>
               <p className="text-xs text-muted-foreground text-center max-w-sm">
-                * Расчет (Работа + Материалы) является предварительным.
+                * Вилка ±15% от базового расчёта. Точную стоимость подтвердит инженер после осмотра объекта.
               </p>
             </div>
           </CardContent>

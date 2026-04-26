@@ -7,7 +7,30 @@ export interface Hazard {
     code: string;
     description: string;
     value: number;
+    group: string;
 }
+
+export type TierId = "budget" | "standard" | "premium";
+
+export interface CoatingTierDef {
+    tierId: TierId;
+    pricePerSqm: number | null; // null = pending, Board дозаполнит
+    systemName: string | null;
+}
+
+export interface ServiceType {
+    id: string;
+    label: string;
+    requiresGeometry: boolean;
+    baseRate: number;
+    coatingTiers: CoatingTierDef[];
+}
+
+export const COATING_TIER_META: Record<TierId, { label: string; description: string }> = {
+    budget:   { label: "Бюджет",   description: "Базовая защита" },
+    standard: { label: "Стандарт", description: "Рекомендованный уровень" },
+    premium:  { label: "Премиум",  description: "Максимальная защита" },
+};
 
 export const CALCULATOR_DATA = {
     regions: [
@@ -145,79 +168,111 @@ export const CALCULATOR_DATA = {
     ] as Region[],
 
     hazards: [
-        { code: "H1", description: "Работа на высоте > 5м", value: 1.2 },
-        { code: "H2", description: "Опасный производственный объект (ОПО)", value: 1.3 },
-        { code: "H3", description: "Работа в замкнутом пространстве", value: 1.5 },
-        { code: "H4", description: "Наличие вредных газов/паров", value: 1.4 },
-        { code: "H5", description: "Взрывопожароопасная зона", value: 1.35 },
-        { code: "H6", description: "Экстремальные температуры", value: 1.25 },
-        { code: "H7", description: "Работа над водой", value: 1.3 },
-        { code: "H8", description: "Срочность (ночная смена)", value: 1.5 }
+        // Автономность
+        { code: "A1", description: "Генератор / водоснабжение", value: 2.00, group: "Автономность" },
+
+        // Естественные
+        { code: "E1", description: "Жара +40…+50°C", value: 1.25, group: "Естественные" },
+        { code: "E2", description: "Жара выше +50°C (спецкостюм)", value: 1.45, group: "Естественные" },
+        { code: "E3", description: "Холод −10…−19°C", value: 1.18, group: "Естественные" },
+        { code: "E4", description: "Холод −20…−29°C", value: 1.36, group: "Естественные" },
+        { code: "E5", description: "Холод −30…−39°C", value: 1.54, group: "Естественные" },
+        { code: "E6", description: "Холод ≤ −40°C", value: 1.72, group: "Естественные" },
+        { code: "E7", description: "Влажность >90%", value: 1.20, group: "Естественные" },
+        { code: "E8", description: "Биологическая опасность", value: 1.40, group: "Естественные" },
+
+        // Опасная среда
+        { code: "O1", description: "Высокое напряжение (ЭМ-поле)", value: 1.30, group: "Опасная среда" },
+        { code: "O2", description: "Хим. вещества в воздухе", value: 1.80, group: "Опасная среда" },
+        { code: "O3", description: "Пыль", value: 1.20, group: "Опасная среда" },
+        { code: "O4", description: "Шум", value: 1.20, group: "Опасная среда" },
+
+        // Режим времени
+        { code: "T1", description: "Ночной график", value: 1.80, group: "Режим времени" },
+        { code: "T2", description: "Новогодние праздники (день)", value: 2.00, group: "Режим времени" },
+        { code: "T3", description: "Новогодние праздники (ночь)", value: 3.60, group: "Режим времени" },
+
+        // Режимный объект
+        { code: "R1", description: "Работа по графику объекта", value: 1.35, group: "Режимный объект" },
+
+        // Сложные условия
+        { code: "S1", description: "Работа с вертолётом", value: 1.45, group: "Сложные условия" },
+        { code: "S2", description: "Движущиеся механизмы", value: 1.20, group: "Сложные условия" },
+        { code: "S3", description: "Замкнутые пространства", value: 1.20, group: "Сложные условия" },
+        { code: "S4", description: "Отрицательный уклон 3°–5°", value: 1.20, group: "Сложные условия" },
+        { code: "S5", description: "Отрицательный уклон 6°–10°", value: 1.30, group: "Сложные условия" },
+        { code: "S6", description: "Отрицательный уклон 11°–15°", value: 1.50, group: "Сложные условия" },
+        { code: "S7", description: "Подземные сооружения", value: 1.68, group: "Сложные условия" },
+        { code: "S8", description: "Работа над водой", value: 1.35, group: "Сложные условия" },
+        { code: "S9", description: "Работа под потолком", value: 1.20, group: "Сложные условия" },
+
+        // БПЛА
+        { code: "B1", description: "Вероятность атаки БПЛА (НПЗ, военные объекты)", value: 1.73, group: "БПЛА" },
+        { code: "B2", description: "По объекту уже была атака БПЛА", value: 2.26, group: "БПЛА" },
     ] as Hazard[]
 };
 
-export const SERVICE_TYPES = [
+export const SERVICE_TYPES: ServiceType[] = [
     {
         id: "chimney_painting",
         label: "Покраска дымовых труб",
         requiresGeometry: true,
         baseRate: 500,
-        coatingOptions: [
-            { id: "enamel", label: "Эмаль (ГФ/ПФ)", price: 250 },
-            { id: "ko_enamel", label: "Кремнийорганика (КО-8101)", price: 450 },
-            { id: "premium_import", label: "Импортное покрытие", price: 900 }
-        ]
+        coatingTiers: [
+            { tierId: "budget",   pricePerSqm: 250, systemName: "Эмаль (ГФ/ПФ)" },
+            { tierId: "standard", pricePerSqm: 450, systemName: "Кремнийорганика (КО-8101)" },
+            { tierId: "premium",  pricePerSqm: 900, systemName: "Импортное покрытие" },
+        ],
     },
     {
         id: "anticorrosion",
         label: "Антикоррозионная защита",
         requiresGeometry: false,
         baseRate: 700,
-        coatingOptions: [
-            { id: "primer_enamel", label: "Грунт-эмаль 3в1", price: 300 },
-            { id: "epoxy", label: "Эпоксидная система", price: 850 },
-            { id: "polyurethane", label: "Полиуретановая система", price: 1100 },
-            { id: "zinc_rich", label: "Цинконаполненный состав", price: 1200 }
-        ]
+        coatingTiers: [
+            { tierId: "budget",   pricePerSqm: null, systemName: null },
+            { tierId: "standard", pricePerSqm: 292,  systemName: "ECOMAST E280+E280+PU74" },
+            { tierId: "premium",  pricePerSqm: null, systemName: null },
+        ],
     },
     {
         id: "mspro_quad",
         label: "MSPRO Quad покрытие",
         requiresGeometry: false,
         baseRate: 1200,
-        coatingOptions: [
-            { id: "quad_standard", label: "MSPRO Quad (Стандарт)", price: 0 } // Included in base? Or add explicit material cost.
-        ]
+        coatingTiers: [
+            { tierId: "budget",   pricePerSqm: null, systemName: null },
+            { tierId: "standard", pricePerSqm: 0,    systemName: "MSPRO Quad" },
+            { tierId: "premium",  pricePerSqm: null, systemName: null },
+        ],
     },
     {
         id: "fireproofing",
         label: "Огнезащита",
         requiresGeometry: false,
         baseRate: 900,
-        coatingOptions: [
-            { id: "r45", label: "R45 (45 минут)", price: 600 },
-            { id: "r60", label: "R60 (60 минут)", price: 900 },
-            { id: "r90", label: "R90 (90 минут)", price: 1500 },
-            { id: "r120", label: "R120 (120 минут)", price: 2200 }
-        ]
+        coatingTiers: [
+            { tierId: "budget",   pricePerSqm: 600,  systemName: "R45 (45 мин.)" },
+            { tierId: "standard", pricePerSqm: 900,  systemName: "R60 (60 мин.)" },
+            { tierId: "premium",  pricePerSqm: 1500, systemName: "R90 (90 мин.)" },
+        ],
     },
     {
         id: "rope_access",
         label: "Промышленный альпинизм",
         requiresGeometry: false,
         baseRate: 2000,
-        coatingOptions: []
+        coatingTiers: [],
     },
     {
         id: "ceiling_sanation",
         label: "Санация/обеспыливание потолков",
         requiresGeometry: false,
         baseRate: 1500,
-        coatingOptions: [
-            { id: "dry_vacuum", label: "Сухое обеспыливание (пылесосы)", price: 0 },
-            { id: "compressed_air", label: "Обдув сжатым воздухом", price: -200 },
-            { id: "wet_cleaning", label: "Влажная химчистка (АВД)", price: 300 },
-            { id: "organosilicate", label: "Покраска (органосиликатная краска)", price: 500 }
-        ]
-    }
+        coatingTiers: [
+            { tierId: "budget",   pricePerSqm: 0,   systemName: "Сухое обеспыливание" },
+            { tierId: "standard", pricePerSqm: 300, systemName: "Влажная химчистка (АВД)" },
+            { tierId: "premium",  pricePerSqm: 500, systemName: "Покраска (органосиликатная)" },
+        ],
+    },
 ];
