@@ -27,6 +27,20 @@ export interface ServiceType {
     coatingTiers: CoatingTierDef[];
 }
 
+export type ChimneyMaterial = "metal" | "concrete" | "brick";
+export const CHIMNEY_MATERIALS: Record<ChimneyMaterial, { label: string }> = {
+    metal:    { label: "Металлическая" },
+    concrete: { label: "Железобетонная" },
+    brick:    { label: "Кирпичная" },
+};
+
+export type SurfacePrep = "hydro" | "sand" | "manual";
+export const SURFACE_PREP_OPTIONS: Record<SurfacePrep, { label: string; description: string }> = {
+    hydro:  { label: "Гидроструйная",          description: "АВД ≥500 бар" },
+    sand:   { label: "Пескоструйная",           description: "Sa 2.5 (ISO 8501)" },
+    manual: { label: "Ручной инструмент",       description: "St 3 (ISO 8501)" },
+};
+
 export const COATING_TIER_META: Record<TierId, { label: string; description: string }> = {
     budget:   { label: "Бюджет",   description: "Базовая защита" },
     standard: { label: "Стандарт", description: "Рекомендованный уровень" },

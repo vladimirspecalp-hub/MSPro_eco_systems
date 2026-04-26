@@ -11,7 +11,7 @@ import { Calculator, Check, ChevronsUpDown, Info } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
-import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId } from "@/lib/calculator-data";
+import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS } from "@/lib/calculator-data";
 import { cn } from "@/lib/utils";
 import {
   Command,
@@ -43,6 +43,8 @@ interface CalculationResult {
   coatingIsPending: boolean;
   baseDays: number;
   optimisticDays: number;
+  chimneyMaterialLabel?: string;
+  surfacePrepLabel?: string;
 }
 
 
@@ -53,6 +55,8 @@ export function CalculatorForm() {
   const [selectedHazards, setSelectedHazards] = useState<string[]>([]);
   const [selectedTier, setSelectedTier] = useState<TierId>("standard");
   const [openRegion, setOpenRegion] = useState(false);
+  const [chimneyMaterial, setChimneyMaterial] = useState<ChimneyMaterial>("metal");
+  const [surfacePrep, setSurfacePrep] = useState<SurfacePrep>("manual");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -77,6 +81,25 @@ export function CalculatorForm() {
     if (!hasTrackedStart.current) {
       trackCalcStart();
       hasTrackedStart.current = true;
+    }
+  };
+
+  // Валидация числовых полей: запрет минуса/e, блокировка paste с минусом, нормализация ведущих нулей
+  const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+      e.preventDefault();
+    }
+  };
+
+  const handleNumericPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (e.clipboardData.getData('text').includes('-')) {
+      e.preventDefault();
+    }
+  };
+
+  const handleLeadingZeros = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (/^0\d/.test(e.target.value)) {
+      e.target.value = String(parseFloat(e.target.value));
     }
   };
 
@@ -161,6 +184,8 @@ export function CalculatorForm() {
         coatingIsPending,
         baseDays,
         optimisticDays,
+        chimneyMaterialLabel: selectedService === "chimney_painting" ? CHIMNEY_MATERIALS[chimneyMaterial].label : undefined,
+        surfacePrepLabel: selectedService === "chimney_painting" ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
       };
 
       trackCalcSubmit();
@@ -181,7 +206,9 @@ export function CalculatorForm() {
       `Регион: ${result.region}`,
       `Площадь: ${result.surfaceArea} м²`,
       result.height ? `Высота: ${result.height} м` : null,
-      result.materialName ? `Материал: ${result.materialName} (${result.materialCost.toLocaleString('ru-RU')} ₽)` : null,
+      result.chimneyMaterialLabel ? `Материал трубы: ${result.chimneyMaterialLabel}` : null,
+      result.surfacePrepLabel ? `Подготовка поверхности: ${result.surfacePrepLabel}` : null,
+      result.materialName ? `Покрытие: ${result.materialName} (${result.materialCost.toLocaleString('ru-RU')} ₽)` : null,
       `Работа: ${result.laborCost.toLocaleString('ru-RU')} ₽`,
       result.hazards.length > 0 ? `Факторы: ${result.hazards.join(", ")}` : null,
       `Ориентировочная стоимость: ${result.costMin.toLocaleString('ru-RU')} – ${result.costMax.toLocaleString('ru-RU')} ₽ (±15%)`
@@ -191,6 +218,7 @@ export function CalculatorForm() {
     params.set("service", selectedService);
     params.set("details", details);
     setLocation(`/contacts?${params.toString()}`);
+    window.scrollTo(0, 0);
   };
 
   return (
@@ -255,6 +283,53 @@ export function CalculatorForm() {
               </div>
             </div>
 
+            {/* Chimney-specific subsections */}
+            {selectedService === "chimney_painting" && (
+              <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+                <div className="space-y-2">
+                  <Label>Материал трубы</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={chimneyMaterial}
+                    onValueChange={(v) => v && setChimneyMaterial(v as ChimneyMaterial)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {(Object.entries(CHIMNEY_MATERIALS) as [ChimneyMaterial, { label: string }][]).map(([id, { label }]) => (
+                      <ToggleGroupItem
+                        key={id}
+                        value={id}
+                        className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        {label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+                <div className="space-y-2">
+                  <Label>Подготовка поверхности</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={surfacePrep}
+                    onValueChange={(v) => v && setSurfacePrep(v as SurfacePrep)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {(Object.entries(SURFACE_PREP_OPTIONS) as [SurfacePrep, { label: string; description: string }][]).map(([id, { label, description }]) => (
+                      <ToggleGroupItem
+                        key={id}
+                        value={id}
+                        className="flex-1 flex-col h-auto py-2.5 gap-0.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        <span className="font-semibold text-sm">{label}</span>
+                        <span className="text-xs font-normal opacity-70">{description}</span>
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+              </div>
+            )}
+
             {/* Coating Tier Selector — segmented */}
             {currentService.coatingTiers.length > 0 && (
               <div className="space-y-2">
@@ -300,17 +375,29 @@ export function CalculatorForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="space-y-2">
                   <Label htmlFor="height">Высота трубы (м) *</Label>
-                  <Input id="height" name="height" type="number" step="0.1" required placeholder="30" />
+                  <Input id="height" name="height" type="number" step="0.1" min="0.1" required placeholder="30"
+                    onKeyDown={handleNumericKeyDown}
+                    onPaste={handleNumericPaste}
+                    onChange={handleLeadingZeros}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="diameter">Диаметр трубы (м) *</Label>
-                  <Input id="diameter" name="diameter" type="number" step="0.1" required placeholder="2.5" />
+                  <Input id="diameter" name="diameter" type="number" step="0.1" min="0.1" required placeholder="2.5"
+                    onKeyDown={handleNumericKeyDown}
+                    onPaste={handleNumericPaste}
+                    onChange={handleLeadingZeros}
+                  />
                 </div>
               </div>
             ) : (
               <div className="space-y-2 p-4 bg-muted/30 rounded-lg">
                 <Label htmlFor="area">Общая площадь поверхности (м²) *</Label>
-                <Input id="area" name="area" type="number" step="1" required placeholder="1000" />
+                <Input id="area" name="area" type="number" step="1" min="1" required placeholder="1000"
+                  onKeyDown={handleNumericKeyDown}
+                  onPaste={handleNumericPaste}
+                  onChange={handleLeadingZeros}
+                />
               </div>
             )}
 
@@ -431,6 +518,20 @@ export function CalculatorForm() {
                 <span className="text-muted-foreground">Стоимость работ (База: {currentService.baseRate} ₽/м²)</span>
                 <span className="font-mono font-semibold">{result.laborCost?.toLocaleString()} ₽</span>
               </div>
+
+              {/* Chimney details */}
+              {result.chimneyMaterialLabel && (
+                <div className="flex justify-between items-baseline pb-2">
+                  <span className="text-muted-foreground">Материал трубы</span>
+                  <span className="font-medium">{result.chimneyMaterialLabel}</span>
+                </div>
+              )}
+              {result.surfacePrepLabel && (
+                <div className="flex justify-between items-baseline pb-2">
+                  <span className="text-muted-foreground">Подготовка поверхности</span>
+                  <span className="font-medium">{result.surfacePrepLabel}</span>
+                </div>
+              )}
 
               {/* Material Line */}
               {result.materialName && (
