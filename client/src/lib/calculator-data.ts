@@ -41,6 +41,16 @@ export const SURFACE_PREP_OPTIONS: Record<SurfacePrep, { label: string; descript
     manual: { label: "Ручной инструмент",       description: "St 3 (ISO 8501)" },
 };
 
+export type AnticorrosionType = "metalstructures" | "tanks" | "silos" | "transport" | "heritage" | "thinsheet";
+export const ANTICORROSION_TYPES: Record<AnticorrosionType, { label: string }> = {
+    metalstructures: { label: "Металлоконструкции" },
+    tanks:           { label: "Резервуары" },
+    silos:           { label: "Силосы" },
+    transport:       { label: "Транспорт" },
+    heritage:        { label: "Объект культурного наследия" },
+    thinsheet:       { label: "Тонколистовой металл сложной формы" },
+};
+
 export const COATING_TIER_META: Record<TierId, { label: string; description: string }> = {
     budget:   { label: "Бюджет",   description: "Базовая защита" },
     standard: { label: "Стандарт", description: "Рекомендованный уровень" },

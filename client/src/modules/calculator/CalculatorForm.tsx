@@ -11,7 +11,7 @@ import { Calculator, Check, ChevronsUpDown, Info } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
-import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS } from "@/lib/calculator-data";
+import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS, AnticorrosionType, ANTICORROSION_TYPES } from "@/lib/calculator-data";
 import { cn } from "@/lib/utils";
 import {
   Command,
@@ -45,6 +45,7 @@ interface CalculationResult {
   optimisticDays: number;
   chimneyMaterialLabel?: string;
   surfacePrepLabel?: string;
+  anticorrosionTypeLabel?: string;
 }
 
 
@@ -57,6 +58,7 @@ export function CalculatorForm() {
   const [openRegion, setOpenRegion] = useState(false);
   const [chimneyMaterial, setChimneyMaterial] = useState<ChimneyMaterial>("metal");
   const [surfacePrep, setSurfacePrep] = useState<SurfacePrep>("manual");
+  const [anticorrosionType, setAnticorrosionType] = useState<AnticorrosionType>("metalstructures");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -186,6 +188,7 @@ export function CalculatorForm() {
         optimisticDays,
         chimneyMaterialLabel: selectedService === "chimney_painting" ? CHIMNEY_MATERIALS[chimneyMaterial].label : undefined,
         surfacePrepLabel: selectedService === "chimney_painting" ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
+        anticorrosionTypeLabel: selectedService === "anticorrosion" ? ANTICORROSION_TYPES[anticorrosionType].label : undefined,
       };
 
       trackCalcSubmit();
@@ -208,6 +211,7 @@ export function CalculatorForm() {
       result.height ? `Высота: ${result.height} м` : null,
       result.chimneyMaterialLabel ? `Материал трубы: ${result.chimneyMaterialLabel}` : null,
       result.surfacePrepLabel ? `Подготовка поверхности: ${result.surfacePrepLabel}` : null,
+      result.anticorrosionTypeLabel ? `Тип конструкции: ${result.anticorrosionTypeLabel}` : null,
       result.materialName ? `Покрытие: ${result.materialName} (${result.materialCost.toLocaleString('ru-RU')} ₽)` : null,
       `Работа: ${result.laborCost.toLocaleString('ru-RU')} ₽`,
       result.hazards.length > 0 ? `Факторы: ${result.hazards.join(", ")}` : null,
@@ -327,6 +331,30 @@ export function CalculatorForm() {
                     ))}
                   </ToggleGroup>
                 </div>
+              </div>
+            )}
+
+            {/* Anticorrosion type subsection */}
+            {selectedService === "anticorrosion" && (
+              <div className="space-y-2 p-4 bg-muted/20 rounded-lg border">
+                <Label>Тип конструкции</Label>
+                <ToggleGroup
+                  type="single"
+                  value={anticorrosionType}
+                  onValueChange={(v) => v && setAnticorrosionType(v as AnticorrosionType)}
+                  variant="outline"
+                  className="flex flex-wrap gap-2"
+                >
+                  {(Object.entries(ANTICORROSION_TYPES) as [AnticorrosionType, { label: string }][]).map(([id, { label }]) => (
+                    <ToggleGroupItem
+                      key={id}
+                      value={id}
+                      className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                    >
+                      {label}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
               </div>
             )}
 
@@ -530,6 +558,12 @@ export function CalculatorForm() {
                 <div className="flex justify-between items-baseline pb-2">
                   <span className="text-muted-foreground">Подготовка поверхности</span>
                   <span className="font-medium">{result.surfacePrepLabel}</span>
+                </div>
+              )}
+              {result.anticorrosionTypeLabel && (
+                <div className="flex justify-between items-baseline pb-2">
+                  <span className="text-muted-foreground">Тип конструкции</span>
+                  <span className="font-medium">{result.anticorrosionTypeLabel}</span>
                 </div>
               )}
 
