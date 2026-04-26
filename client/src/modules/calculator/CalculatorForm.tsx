@@ -158,6 +158,7 @@ export function CalculatorForm() {
         laborCost: parseFloat(laborCost.toFixed(2)),
         materialCost: parseFloat(materialCost.toFixed(2)),
         materialName: materialName,
+        coatingIsPending,
         baseDays,
         optimisticDays,
       };

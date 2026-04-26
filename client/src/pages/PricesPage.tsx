@@ -107,11 +107,11 @@ export default function PricesPage() {
                                             <span className="font-semibold text-primary">От {service.baseRate} ₽</span>
                                         </TableCell>
                                         <TableCell className="text-right align-top py-4">
-                                            {service.coatingOptions && service.coatingOptions.length > 0 ? (
+                                            {service.coatingTiers && service.coatingTiers.length > 0 ? (
                                                 <div className="flex flex-col gap-1 items-end">
-                                                    {service.coatingOptions.map(opt => (
-                                                        <div key={opt.id} className="text-sm text-muted-foreground whitespace-nowrap">
-                                                            {opt.label}: <span className="font-medium text-foreground">{opt.price > 0 ? `${opt.price} ₽` : "Вкл."}</span>
+                                                    {service.coatingTiers.map(tier => (
+                                                        <div key={tier.tierId} className="text-sm text-muted-foreground whitespace-nowrap">
+                                                            {tier.systemName ?? tier.tierId}: <span className="font-medium text-foreground">{tier.pricePerSqm !== null ? `${tier.pricePerSqm} ₽` : "уточн."}</span>
                                                         </div>
                                                     ))}
                                                 </div>
