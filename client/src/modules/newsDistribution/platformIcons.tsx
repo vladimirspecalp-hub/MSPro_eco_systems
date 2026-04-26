@@ -1,8 +1,9 @@
-import { 
-  SiTelegram, SiVk, SiOdnoklassniki, 
+import {
+  SiTelegram, SiVk, SiOdnoklassniki,
   SiWhatsapp, SiViber, SiPinterest, SiFlipboard,
-  SiX, SiFacebook, SiLinkedin
+  SiX, SiFacebook
 } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa6";
 import { Rss, Newspaper, Globe, BookOpen } from "lucide-react";
 
 export type PlatformId = 
@@ -67,7 +68,7 @@ export function PlatformIcon({ platformId, className = "h-5 w-5" }: PlatformIcon
     case "facebook":
       return <SiFacebook {...iconProps} />;
     case "linkedin":
-      return <SiLinkedin {...iconProps} />;
+      return <FaLinkedin {...iconProps} />;
     default:
       return <Globe {...iconProps} />;
   }

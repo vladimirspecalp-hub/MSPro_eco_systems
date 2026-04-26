@@ -7,10 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ExternalLink, Copy, Check } from "lucide-react";
-import { 
-  SiTelegram, SiVk, SiYoutube, SiLinkedin,
+import {
+  SiTelegram, SiVk, SiYoutube,
   SiOdnoklassniki
 } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa6";
 import { useState } from "react";
 import { trackShareClick } from "@/modules/analytics";
 
@@ -42,7 +43,7 @@ const PLATFORM_ICONS: Record<string, React.ComponentType<{ className?: string }>
   telegram: SiTelegram,
   vk: SiVk,
   youtube: SiYoutube,
-  linkedin: SiLinkedin,
+  linkedin: FaLinkedin,
   ok: SiOdnoklassniki,
 };
 
