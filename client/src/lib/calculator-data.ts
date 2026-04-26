@@ -16,6 +16,7 @@ export interface CoatingTierDef {
     tierId: TierId;
     pricePerSqm: number | null; // null = pending, Board дозаполнит
     systemName: string | null;
+    note?: string;
 }
 
 export interface ServiceType {
@@ -231,7 +232,7 @@ export const SERVICE_TYPES: ServiceType[] = [
         baseRate: 700,
         coatingTiers: [
             { tierId: "budget",   pricePerSqm: null, systemName: null },
-            { tierId: "standard", pricePerSqm: 292,  systemName: "ECOMAST E280+E280+PU74" },
+            { tierId: "standard", pricePerSqm: 292,  systemName: "ECOMAST E280+E280+PU74", note: "сертификат ЦНИИС, 25+ лет" },
             { tierId: "premium",  pricePerSqm: null, systemName: null },
         ],
     },

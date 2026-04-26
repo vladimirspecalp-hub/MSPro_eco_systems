@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calculator, Check, ChevronsUpDown, Info } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
 import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId } from "@/lib/calculator-data";
@@ -40,6 +41,8 @@ interface CalculationResult {
   materialCost: number;
   materialName: string | null;
   coatingIsPending: boolean;
+  baseDays: number;
+  optimisticDays: number;
 }
 
 
@@ -137,6 +140,10 @@ export function CalculatorForm() {
       // 4. Total
       const totalCost = laborCost + materialCost;
 
+      // 5. Deadline Estimation
+      const baseDays = Math.ceil(surfaceArea / 80);
+      const optimisticDays = Math.ceil(surfaceArea / 500);
+
       const calculationData: CalculationResult = {
         serviceType: currentService.label,
         surfaceArea: parseFloat(surfaceArea.toFixed(2)),
@@ -150,7 +157,9 @@ export function CalculatorForm() {
         // Store breakdown details in result for UI
         laborCost: parseFloat(laborCost.toFixed(2)),
         materialCost: parseFloat(materialCost.toFixed(2)),
-        materialName: materialName
+        materialName: materialName,
+        baseDays,
+        optimisticDays,
       };
 
       trackCalcSubmit();
@@ -245,22 +254,44 @@ export function CalculatorForm() {
               </div>
             </div>
 
-            {/* Coating Type Selector (Dynamic) */}
-            {currentService.coatingOptions && currentService.coatingOptions.length > 0 && (
+            {/* Coating Tier Selector — segmented */}
+            {currentService.coatingTiers.length > 0 && (
               <div className="space-y-2">
-                <Label>Тип покрытия / Материал *</Label>
-                <Select value={selectedCoating} onValueChange={setSelectedCoating}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите материал" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentService.coatingOptions.map((opt) => (
-                      <SelectItem key={opt.id} value={opt.id}>
-                        {opt.label} ({opt.price > 0 ? `${opt.price} ₽/м²` : "Включено в базу"})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Уровень покрытия</Label>
+                <ToggleGroup
+                  type="single"
+                  value={selectedTier}
+                  onValueChange={(v) => v && setSelectedTier(v as TierId)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {currentService.coatingTiers.map((t) => {
+                    const meta = COATING_TIER_META[t.tierId];
+                    return (
+                      <ToggleGroupItem
+                        key={t.tierId}
+                        value={t.tierId}
+                        className="flex-1 flex-col h-auto py-2.5 gap-0.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        <span className="font-semibold text-sm">{meta.label}</span>
+                        <span className="text-xs font-normal opacity-70">
+                          {t.pricePerSqm !== null ? `${t.pricePerSqm} ₽/м²` : "уточняется"}
+                        </span>
+                      </ToggleGroupItem>
+                    );
+                  })}
+                </ToggleGroup>
+                {currentService.coatingTiers
+                  .filter(t => t.tierId === selectedTier)
+                  .map(tier => (
+                    <p key={tier.tierId} className="text-xs text-muted-foreground px-1">
+                      {tier.systemName
+                        ? `${tier.systemName}${tier.note ? ` · ${tier.note}` : ""}`
+                        : `${COATING_TIER_META[tier.tierId].label}: система и стоимость уточняются`
+                      }
+                    </p>
+                  ))
+                }
               </div>
             )}
 
@@ -404,9 +435,29 @@ export function CalculatorForm() {
               {result.materialName && (
                 <div className="flex justify-between items-baseline pb-2">
                   <span className="text-muted-foreground">Материалы: {result.materialName}</span>
-                  <span className="font-mono font-semibold">{result.materialCost?.toLocaleString()} ₽</span>
+                  <span className="font-mono font-semibold">
+                    {result.coatingIsPending ? "уточняется" : `${result.materialCost?.toLocaleString()} ₽`}
+                  </span>
                 </div>
               )}
+
+              {/* Deadline Line */}
+              <div className="flex justify-between items-center pb-2">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  Срок работ
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-xs">
+                        Базовый темп: 80 м²/день (включая приезд, подготовку и сдачу). При идеальных условиях: 500 м²/день.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </span>
+                <span className="font-mono font-semibold">~{result.baseDays} дн. (базовый темп 80 м²/день; при идеальных условиях — от {result.optimisticDays} дн.)</span>
+              </div>
 
               {result.hazards.length > 0 && (
                 <div className="text-sm text-muted-foreground mt-2 border-t pt-2 border-dashed">
