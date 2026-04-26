@@ -343,13 +343,13 @@ export function CalculatorForm() {
                   value={anticorrosionType}
                   onValueChange={(v) => v && setAnticorrosionType(v as AnticorrosionType)}
                   variant="outline"
-                  className="flex flex-wrap gap-2"
+                  className="grid grid-cols-3 gap-2"
                 >
                   {(Object.entries(ANTICORROSION_TYPES) as [AnticorrosionType, { label: string }][]).map(([id, { label }]) => (
                     <ToggleGroupItem
                       key={id}
                       value={id}
-                      className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      className="w-full h-auto py-2 whitespace-normal text-center leading-snug data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
                     >
                       {label}
                     </ToggleGroupItem>
