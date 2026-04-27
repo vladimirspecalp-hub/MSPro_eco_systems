@@ -18,6 +18,7 @@ uploads/
 *.log
 *.log.*
 logs/
+!logs/.gitkeep
 
 # Backups
 backups/
