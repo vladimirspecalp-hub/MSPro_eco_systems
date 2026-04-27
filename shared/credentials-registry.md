@@ -10,18 +10,20 @@
 | Поле        | Значение                                                    |
 |-------------|-------------------------------------------------------------|
 | host alias  | `mspro-beget`                                               |
-| login       | `mspro@dazed`                                               |
+| user        | `mspro`                                                     |
+| hostname    | `mspro.beget.tech` (сервер Beget, внутр. имя `dazed`)       |
 | key path    | `~/.ssh/mspro_beget_ed25519`                                |
 | key type    | Ed25519                                                     |
 | fingerprint | `SHA256:gdYeFdY1a3BWt07BROqVK4DAVaAwfqWC8wSSLht+9YI`        |
 | last_checked | 2026-04-27                                                 |
 
-**~/.ssh/config** (фрагмент):
+**~/.ssh/config** (актуальный фрагмент):
 ```
 Host mspro-beget
-    HostName mspro-ltd.ru
+    HostName mspro.beget.tech
     User mspro
     IdentityFile ~/.ssh/mspro_beget_ed25519
+    IdentitiesOnly yes
 ```
 
 > **TODO (техдолг):** На Windows права ключа `644` вместо обязательных `600`.
@@ -90,15 +92,17 @@ sed -i "s/last_checked | .*/last_checked | $DATE/" shared/credentials-registry.m
 
 ```env
 # Яндекс.Метрика
-YM_TOKEN=ya29.xxx...
+YM_TOKEN=<oauth-token>
 
 # GA4
-GA4_CLIENT_ID=123456789-xxx.apps.googleusercontent.com
-GA4_CLIENT_SECRET=GOCSPX-xxx...
-GA4_REFRESH_TOKEN=1//xxx...
+GA4_CLIENT_ID=<client_id>.apps.googleusercontent.com
+GA4_CLIENT_SECRET=GOCSPX-<secret>
+GA4_REFRESH_TOKEN=1//<refresh_token>
 
 # Paperclip (Сисадмин)
-PAPERCLIP_API_KEY=eyJhbGci...
-PAPERCLIP_API_URL=https://api.paperclip.ing
+PAPERCLIP_API_KEY=
+PAPERCLIP_API_URL=http://127.0.0.1:3100
 PAPERCLIP_COMPANY_ID=9bdd1254-4b9d-490d-aafa-04e26c81c329
 ```
+
+Файл уже существует и заполнен: `~/.config/mspro/access-check.env`
