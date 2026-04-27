@@ -51,6 +51,16 @@ export const ANTICORROSION_TYPES: Record<AnticorrosionType, { label: string }> =
     thinsheet:       { label: "Тонколистовой металл сложной формы" },
 };
 
+export type FireproofingStructureType = "metalstructures" | "ducts" | "cables" | "concrete" | "walls" | "wood";
+export const FIREPROOFING_STRUCTURE_TYPES: Record<FireproofingStructureType, { label: string }> = {
+    metalstructures: { label: "Металлоконструкции (балки, колонны, фермы)" },
+    ducts:           { label: "Воздуховоды (вентиляция)" },
+    cables:          { label: "Кабельные линии и проходки" },
+    concrete:        { label: "Железобетонные перекрытия" },
+    walls:           { label: "Стены (несущие конструкции)" },
+    wood:            { label: "Деревянные конструкции" },
+};
+
 export const COATING_TIER_META: Record<TierId, { label: string; description: string }> = {
     budget:   { label: "Бюджет",   description: "Базовая защита" },
     standard: { label: "Стандарт", description: "Рекомендованный уровень" },

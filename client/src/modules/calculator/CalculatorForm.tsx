@@ -11,7 +11,7 @@ import { Calculator, Check, ChevronsUpDown, Info } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
-import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS, AnticorrosionType, ANTICORROSION_TYPES } from "@/lib/calculator-data";
+import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS, AnticorrosionType, ANTICORROSION_TYPES, FireproofingStructureType, FIREPROOFING_STRUCTURE_TYPES } from "@/lib/calculator-data";
 import { cn } from "@/lib/utils";
 import {
   Command,
@@ -46,6 +46,7 @@ interface CalculationResult {
   chimneyMaterialLabel?: string;
   surfacePrepLabel?: string;
   anticorrosionTypeLabel?: string;
+  fireproofingStructureLabel?: string;
 }
 
 
@@ -59,6 +60,7 @@ export function CalculatorForm() {
   const [chimneyMaterial, setChimneyMaterial] = useState<ChimneyMaterial>("metal");
   const [surfacePrep, setSurfacePrep] = useState<SurfacePrep>("manual");
   const [anticorrosionType, setAnticorrosionType] = useState<AnticorrosionType>("metalstructures");
+  const [fireproofingStructureType, setFireproofingStructureType] = useState<FireproofingStructureType>("metalstructures");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -187,8 +189,9 @@ export function CalculatorForm() {
         baseDays,
         optimisticDays,
         chimneyMaterialLabel: selectedService === "chimney_painting" ? CHIMNEY_MATERIALS[chimneyMaterial].label : undefined,
-        surfacePrepLabel: (selectedService === "chimney_painting" || selectedService === "anticorrosion") ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
+        surfacePrepLabel: (selectedService === "chimney_painting" || selectedService === "anticorrosion" || selectedService === "fireproofing") ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
         anticorrosionTypeLabel: selectedService === "anticorrosion" ? ANTICORROSION_TYPES[anticorrosionType].label : undefined,
+        fireproofingStructureLabel: selectedService === "fireproofing" ? FIREPROOFING_STRUCTURE_TYPES[fireproofingStructureType].label : undefined,
       };
 
       trackCalcSubmit();
@@ -212,6 +215,7 @@ export function CalculatorForm() {
       result.chimneyMaterialLabel ? `Материал трубы: ${result.chimneyMaterialLabel}` : null,
       result.surfacePrepLabel ? `Подготовка поверхности: ${result.surfacePrepLabel}` : null,
       result.anticorrosionTypeLabel ? `Тип конструкции: ${result.anticorrosionTypeLabel}` : null,
+      result.fireproofingStructureLabel ? `Тип конструкции: ${result.fireproofingStructureLabel}` : null,
       result.materialName ? `Покрытие: ${result.materialName} (${result.materialCost.toLocaleString('ru-RU')} ₽)` : null,
       `Работа: ${result.laborCost.toLocaleString('ru-RU')} ₽`,
       result.hazards.length > 0 ? `Факторы: ${result.hazards.join(", ")}` : null,
@@ -347,6 +351,53 @@ export function CalculatorForm() {
                     className="grid grid-cols-3 gap-2"
                   >
                     {(Object.entries(ANTICORROSION_TYPES) as [AnticorrosionType, { label: string }][]).map(([id, { label }]) => (
+                      <ToggleGroupItem
+                        key={id}
+                        value={id}
+                        className="w-full h-auto py-2 whitespace-normal text-center leading-snug data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        {label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+                <div className="space-y-2">
+                  <Label>Подготовка поверхности</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={surfacePrep}
+                    onValueChange={(v) => v && setSurfacePrep(v as SurfacePrep)}
+                    variant="outline"
+                    className="grid grid-cols-3 gap-2"
+                  >
+                    {(Object.entries(SURFACE_PREP_OPTIONS) as [SurfacePrep, { label: string; description: string }][]).map(([id, { label, description }]) => (
+                      <ToggleGroupItem
+                        key={id}
+                        value={id}
+                        className="w-full h-auto py-2.5 flex-col gap-0.5 whitespace-normal text-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        <span className="font-semibold text-sm">{label}</span>
+                        <span className="text-xs font-normal opacity-70">{description}</span>
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+              </div>
+            )}
+
+            {/* Fireproofing subsections */}
+            {selectedService === "fireproofing" && (
+              <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+                <div className="space-y-2">
+                  <Label>Тип конструкции</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={fireproofingStructureType}
+                    onValueChange={(v) => v && setFireproofingStructureType(v as FireproofingStructureType)}
+                    variant="outline"
+                    className="grid grid-cols-3 gap-2"
+                  >
+                    {(Object.entries(FIREPROOFING_STRUCTURE_TYPES) as [FireproofingStructureType, { label: string }][]).map(([id, { label }]) => (
                       <ToggleGroupItem
                         key={id}
                         value={id}
@@ -587,6 +638,12 @@ export function CalculatorForm() {
                 <div className="flex justify-between items-baseline pb-2">
                   <span className="text-muted-foreground">Тип конструкции</span>
                   <span className="font-medium">{result.anticorrosionTypeLabel}</span>
+                </div>
+              )}
+              {result.fireproofingStructureLabel && (
+                <div className="flex justify-between items-baseline pb-2">
+                  <span className="text-muted-foreground">Тип конструкции</span>
+                  <span className="font-medium">{result.fireproofingStructureLabel}</span>
                 </div>
               )}
 
