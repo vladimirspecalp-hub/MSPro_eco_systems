@@ -41,6 +41,13 @@ export function ContactForm() {
 
       if (response.ok) {
         trackFormSubmit("contact-form", "contact");
+        if (typeof window !== "undefined" && (window as any).gtag) {
+          (window as any).gtag("event", "lead_submit", {
+            source: "contact_form",
+            landing: window.location.pathname,
+            service_type: "general",
+          });
+        }
         toast({
           title: "Заявка отправлена!",
           description: "Мы свяжемся с вами в ближайшее время.",

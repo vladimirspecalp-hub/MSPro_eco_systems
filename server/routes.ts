@@ -149,6 +149,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit per file
   });
 
+  // Helper: fix Cyrillic text fields mis-encoded as Latin1 (same issue as filenames)
+  function tryFixEncoding(s: string): string {
+    if (!/[\x80-\xff]/.test(s)) return s; // no extended chars — already ASCII or correct Unicode
+    try {
+      const fixed = Buffer.from(s, "latin1").toString("utf8");
+      if (!fixed.includes("\ufffd")) return fixed; // no replacement chars = valid UTF-8 decoded
+    } catch { /* ignore */ }
+    return s;
+  }
+
   // Lead routes
   app.post("/api/leads", (req: any, res: any, next: any) => {
     upload.array("files", 10)(req, res, (err: any) => {
@@ -174,7 +184,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // FormData sends everything as strings, so we might need to parse.
       // But Zod schema expects strings for standard fields, which matches FormData.
 
-      const rawData = { ...req.body };
+      // Fix Cyrillic text fields encoding (Multer/busboy may parse as Latin1 on some platforms)
+      const rawData: Record<string, any> = {};
+      for (const [key, value] of Object.entries(req.body)) {
+        rawData[key] = typeof value === "string" ? tryFixEncoding(value) : value;
+      }
 
       // If files were uploaded, add their paths/names to attachments
       if (Array.isArray(req.files) && req.files.length > 0) {
@@ -195,10 +209,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Notification trigger failed:", err);
       }
 
-      // 2. Clear from storage (Since we use MemStorage as a stub/log)
+      // 2. Store in MemStorage (stub/log) + persist to JSONL file
       const lead = await storage.createLead(validatedData);
       console.log("Lead processed:", lead.id);
 
+      // Persist to data/leads/YYYY-MM.jsonl so leads survive server restarts
+      try {
+        const dataDir = resolve(process.cwd(), "data", "leads");
+        if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
+        const now = new Date();
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        await fs.appendFile(
+          join(dataDir, `${monthKey}.jsonl`),
+          JSON.stringify({ ...lead, createdAt: now.toISOString() }) + "\n",
+          "utf8"
+        );
+      } catch (persistErr) {
+        console.error("JSONL persist failed (non-critical):", persistErr);
+      }
+
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
       res.json(lead);
     } catch (error: any) {
       console.error("Lead Handler Execution Failed:", error);

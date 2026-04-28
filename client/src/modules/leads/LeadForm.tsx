@@ -115,7 +115,15 @@ export function LeadForm({ defaultServiceType, source = "website", onSuccess }: 
 
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // GA4 lead_submit event (required for CR% measurement)
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        (window as any).gtag("event", "lead_submit", {
+          source,
+          landing: window.location.pathname,
+          service_type: variables.serviceType,
+        });
+      }
       toast({
         title: "Заявка отправлена!",
         description: "Мы свяжемся с вами в ближайшее время.",
