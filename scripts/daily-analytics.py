@@ -3,529 +3,853 @@
 scripts/daily-analytics.py
 Ежедневный сборщик аналитики mspro-ltd.ru.
 
-Этап 2 (MSP-52): Block A (Я.Вебмастер индексация) + Block C (Я.Метрика поведение).
-Этап 3 (MSP-53): Block B (GSC поисковый трафик) + Block C дополнение (GA4).
+Этап 2 (MSP-52): Блок A (Я.Вебмастер) + Блок C (Я.Метрика).
+Этап 3 (MSP-53): Блок B (GSC) + Блок D (GA4).
+Этап 4 (MSP-54): Блок E (TG/IMAP заявки) + полный markdown render.
 
 Запуск:
-    python3 scripts/daily-analytics.py
+    python3 scripts/daily-analytics.py [--date YYYY-MM-DD] [--dry-run]
 
-Credentials (из env или файла):
-    YA_OAUTH_TOKEN       — Yandex OAuth-токен (Вебмастер + Метрика)
-    YA_WEBMASTER_USER    — ID пользователя Вебмастера
-    YA_WEBMASTER_HOST    — Host в формате https:mspro-ltd.ru:443
-    YA_METRIKA_COUNTER   — Counter ID Метрики (72249244)
+Credentials (env-файл или переменные окружения):
+    YA_OAUTH_TOKEN / YM_TOKEN    — Yandex OAuth-токен
+    YA_WEBMASTER_USER            — ID пользователя Вебмастера (239393595)
+    YA_WEBMASTER_HOST            — https:mspro-ltd.ru:443
+    YA_METRIKA_COUNTER           — ID счётчика Метрики (72249244)
+    GOOGLE_CLIENT_ID             — Google OAuth client_id
+    GOOGLE_CLIENT_SECRET         — Google OAuth client_secret
+    GOOGLE_REFRESH_TOKEN         — Google refresh_token
+    GA4_PROPERTY_ID              — GA4 property ID (534148832)
+    GSC_SITE_URL                 — sc-domain:mspro-ltd.ru
+    TELEGRAM_BOT_TOKEN           — токен бота Telegram
+    IMAP_HOST                    — IMAP сервер (default: mail.beget.com)
+    IMAP_USER                    — sale@mspro-ltd.ru
+    IMAP_PASS                    — пароль IMAP (= SMTP_PASS)
 
 Output:
     _data/analytics/YYYY-MM-DD.json   — полный архив (не коммитится)
     shared/icos/daily/YYYY-MM-DD.md   — ежедневный отчёт (коммитится)
 """
 
+import argparse
+import email
+import imaplib
 import json
 import os
 import sys
-import io
-from datetime import date, timedelta
+import traceback
+from datetime import datetime, timedelta, date
 from pathlib import Path
 
-import requests
+try:
+    import requests
+except ImportError:
+    print("ERROR: requests not installed. Run: pip install requests", file=sys.stderr)
+    sys.exit(1)
 
-# UTF-8 stdout
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 # ---------------------------------------------------------------------------
-# Конфигурация
-# ---------------------------------------------------------------------------
-SCRIPT_DIR = Path(__file__).parent
-REPO_DIR = SCRIPT_DIR.parent
-
-# Credentials — из env (cron-env-файл загружается runner-ом)
-YA_TOKEN = (
-    os.environ.get("YA_OAUTH_TOKEN")
-    or os.environ.get("YA_OAUTH")
-    or os.environ.get("YM_TOKEN", "")
-)
-YA_USER = os.environ.get("YA_WEBMASTER_USER", "239393595")
-YA_HOST = os.environ.get("YA_WEBMASTER_HOST", "https:mspro-ltd.ru:443")
-YA_COUNTER = os.environ.get("YA_METRIKA_COUNTER", "72249244")
-
-TODAY = date.today().isoformat()
-YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
-WEEK_AGO = (date.today() - timedelta(days=7)).isoformat()
-DAY_BEFORE_YESTERDAY = (date.today() - timedelta(days=2)).isoformat()
-
-DATA_DIR = REPO_DIR / "_data" / "analytics"
-REPORT_DIR = REPO_DIR / "shared" / "icos" / "daily"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-REPORT_DIR.mkdir(parents=True, exist_ok=True)
-
-OUTPUT_JSON = DATA_DIR / f"{TODAY}.json"
-OUTPUT_MD = REPORT_DIR / f"{TODAY}.md"
-
-# ---------------------------------------------------------------------------
-# Helpers
+# Helpers: env loading
 # ---------------------------------------------------------------------------
 
-def log_err(msg: str) -> None:
-    print(f"[ERR] {msg}", file=sys.stderr)
-
-
-def ya_headers() -> dict:
-    return {"Authorization": f"OAuth {YA_TOKEN}"}
-
-
-def safe_get(url: str, params: dict = None, label: str = "") -> dict | None:
-    """GET с обработкой ошибок → dict или None."""
+def load_env_file(path: str) -> dict:
+    """Загружает KEY=VALUE из файла .env."""
+    env = {}
     try:
-        r = requests.get(url, headers=ya_headers(), params=params, timeout=20)
-        if r.ok:
-            return r.json()
-        log_err(f"{label}: HTTP {r.status_code} — {r.text[:200]}")
-        return None
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    k, _, v = line.partition("=")
+                    env[k.strip()] = v.strip()
+    except FileNotFoundError:
+        pass
+    return env
+
+
+def find_secrets_dir() -> Path:
+    """Ищет _secrets/ от скрипта вверх по дереву."""
+    cur = Path(__file__).resolve().parent
+    for _ in range(6):
+        candidate = cur / "_secrets"
+        if candidate.is_dir():
+            return candidate
+        cur = cur.parent
+    return Path("_secrets")
+
+
+def find_repo_dir() -> Path:
+    """Ищет корень репозитория (содержит scripts/)."""
+    cur = Path(__file__).resolve().parent
+    if cur.name == "scripts":
+        return cur.parent
+    return cur
+
+
+def build_cfg(secrets_dir: Path) -> dict:
+    """Склеивает env из файлов + переменных окружения (env побеждает)."""
+    cfg: dict = {}
+    # _secrets/ относительно repo
+    for fname in ("yandex.env", "google-analytics.env",
+                  "mspro-site-production.env", "telegram.env"):
+        cfg.update(load_env_file(str(secrets_dir / fname)))
+    # ~/.config/mspro/access-check.env (локальный dev env)
+    home_env = Path.home() / ".config" / "mspro" / "access-check.env"
+    cfg.update(load_env_file(str(home_env)))
+    # Переменные окружения переопределяют файлы
+    cfg.update({k: v for k, v in os.environ.items() if v})
+    # Алиасы Yandex
+    if not cfg.get("YA_OAUTH_TOKEN"):
+        cfg["YA_OAUTH_TOKEN"] = cfg.get("YM_TOKEN", "")
+    # Алиасы Google (access-check.env использует GA4_* префикс)
+    if not cfg.get("GOOGLE_CLIENT_ID"):
+        cfg["GOOGLE_CLIENT_ID"] = cfg.get("GA4_CLIENT_ID", "")
+    if not cfg.get("GOOGLE_CLIENT_SECRET"):
+        cfg["GOOGLE_CLIENT_SECRET"] = cfg.get("GA4_CLIENT_SECRET", "")
+    if not cfg.get("GOOGLE_REFRESH_TOKEN"):
+        cfg["GOOGLE_REFRESH_TOKEN"] = cfg.get("GA4_REFRESH_TOKEN", "")
+    # Алиасы IMAP (берём из SMTP если нет явного)
+    if not cfg.get("IMAP_HOST"):
+        cfg["IMAP_HOST"] = "mail.beget.com"
+    if not cfg.get("IMAP_USER") and cfg.get("SMTP_USER"):
+        cfg["IMAP_USER"] = cfg["SMTP_USER"]
+    if not cfg.get("IMAP_PASS") and cfg.get("SMTP_PASS"):
+        cfg["IMAP_PASS"] = cfg["SMTP_PASS"]
+    return cfg
+
+
+# ---------------------------------------------------------------------------
+# Блок A: Yandex Webmaster API v4
+# ---------------------------------------------------------------------------
+
+def ywm_headers(token: str) -> dict:
+    return {"Authorization": f"OAuth {token}", "Content-Type": "application/json"}
+
+
+def ywm_get_summary(token: str, user_id: str, host_id: str) -> dict:
+    url = f"https://api.webmaster.yandex.net/v4/user/{user_id}/hosts/{host_id}/summary"
+    try:
+        r = requests.get(url, headers=ywm_headers(token), timeout=15)
+        if r.status_code == 200:
+            d = r.json()
+            return {
+                "pages_count": d.get("pages_count"),
+                "searchable_pages_count": d.get("searchable_pages_count"),
+                "excluded_pages_count": d.get("excluded_pages_count"),
+                "sqi": d.get("sqi"),
+            }
+        print(f"WARN: YWM summary {r.status_code}: {r.text[:200]}", file=sys.stderr)
     except Exception as e:
-        log_err(f"{label}: {e}")
-        return None
+        print(f"ERROR: YWM summary: {e}", file=sys.stderr)
+    return {}
 
 
-# ---------------------------------------------------------------------------
-# Block A — Yandex Webmaster (индексация)
-# ---------------------------------------------------------------------------
-
-def fetch_ywm_summary() -> dict:
-    """Сводка по сайту: sqi, indexed, excluded, problems."""
-    d = safe_get(
-        f"https://api.webmaster.yandex.net/v4/user/{YA_USER}/hosts/{YA_HOST}/summary",
-        label="YWM summary",
+def ywm_get_indexing_history(token: str, user_id: str, host_id: str, date_str: str) -> dict:
+    end_dt = datetime.strptime(date_str, "%Y-%m-%d")
+    start_dt = end_dt - timedelta(days=30)
+    url = (
+        f"https://api.webmaster.yandex.net/v4/user/{user_id}/hosts/{host_id}/indexing/history"
+        f"?date_from={start_dt.strftime('%Y-%m-%d')}&date_to={end_dt.strftime('%Y-%m-%d')}"
     )
-    if not d:
-        return {"error": "no data"}
-    return {
-        "sqi": d.get("sqi"),
-        "indexed": d.get("searchable_pages_count"),
-        "excluded": d.get("excluded_pages_count"),
-        "problems": d.get("site_problems", {}),
-    }
+    try:
+        r = requests.get(url, headers=ywm_headers(token), timeout=15)
+        if r.status_code == 200:
+            d = r.json()
+            history = d.get("history", [])
+            if history:
+                latest = history[-1]
+                prev = history[-2] if len(history) > 1 else {}
+                return {
+                    "date": latest.get("date"),
+                    "added_urls_count": latest.get("added_urls_count"),
+                    "excluded_urls_count": latest.get("excluded_urls_count"),
+                    "total_urls_count": latest.get("total_urls_count"),
+                    "prev_total": prev.get("total_urls_count"),
+                    "history_points": len(history),
+                }
+        print(f"WARN: YWM indexing history {r.status_code}: {r.text[:200]}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: YWM indexing history: {e}", file=sys.stderr)
+    return {}
 
 
-def fetch_ywm_index_history() -> dict:
-    """История индексации за последние 2 дня → дельта."""
-    d = safe_get(
-        f"https://api.webmaster.yandex.net/v4/user/{YA_USER}/hosts/{YA_HOST}/search-urls/in-search/history",
-        params={"date_from": WEEK_AGO, "date_to": TODAY},
-        label="YWM index history",
-    )
-    if not d:
-        return {"error": "no data"}
-
-    points = d.get("history", [])
-    if len(points) >= 2:
-        last = points[-1]
-        prev = points[-2]
-        # API returns "value" for in-search history
-        last_val = last.get("value") or last.get("count")
-        prev_val = prev.get("value") or prev.get("count")
-        delta = (last_val or 0) - (prev_val or 0)
-        return {
-            "today_count": last_val,
-            "prev_count": prev_val,
-            "delta": delta,
-            "date": last.get("date"),
-        }
-    return {"points": len(points), "raw": points[-3:] if points else []}
-
-
-def fetch_ywm_excluded() -> list:
-    """Страницы не в индексе (исключённые) — топ-10."""
-    d = safe_get(
-        f"https://api.webmaster.yandex.net/v4/user/{YA_USER}/hosts/{YA_HOST}/search-urls/excluded/samples",
-        params={"limit": 10},
-        label="YWM excluded",
-    )
-    if not d:
-        return []
-    samples = d.get("samples", [])
-    result = []
-    for s in samples:
-        result.append({
-            "url": s.get("url"),
-            "reason": s.get("exclusion_reason"),
-            "date": s.get("date"),
-        })
-    return result
-
-
-def fetch_ywm_diagnostics() -> list:
-    """Проблемы сайта по диагностике — только PRESENT-состояния."""
-    d = safe_get(
-        f"https://api.webmaster.yandex.net/v4/user/{YA_USER}/hosts/{YA_HOST}/diagnostics",
-        label="YWM diagnostics",
-    )
-    if not d:
-        return []
-    problems = d.get("problems") or {}
-    result = []
-    if isinstance(problems, dict):
-        for problem_type, info in problems.items():
-            if not isinstance(info, dict):
-                continue
-            state = info.get("state", "ABSENT")
-            if state == "PRESENT":
-                result.append({
-                    "type": problem_type,
-                    "severity": info.get("severity"),
-                    "last_updated": info.get("last_state_update"),
+def ywm_get_top_queries(token: str, user_id: str, host_id: str) -> list:
+    url = f"https://api.webmaster.yandex.net/v4/user/{user_id}/hosts/{host_id}/query-analytics/list"
+    body = {"offset": 0, "limit": 20, "device_type_indicator": "ALL"}
+    try:
+        r = requests.post(url, headers=ywm_headers(token), json=body, timeout=15)
+        if r.status_code == 200:
+            d = r.json()
+            queries = []
+            for item in d.get("text_indicator_to_statistics_list", []):
+                q = item.get("text_indicator", {}).get("value", "")
+                stats = item.get("statistics", [{}])[0]
+                queries.append({
+                    "query": q,
+                    "clicks": stats.get("clicks", 0),
+                    "impressions": stats.get("impressions", 0),
+                    "position": stats.get("position"),
                 })
+            return queries
+        print(f"WARN: YWM queries {r.status_code}: {r.text[:200]}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: YWM queries: {e}", file=sys.stderr)
+    return []
+
+
+def collect_block_a(cfg: dict, date_str: str) -> dict:
+    token = cfg.get("YA_OAUTH_TOKEN", "")
+    user_id = cfg.get("YA_WEBMASTER_USER", "")
+    host_id = cfg.get("YA_WEBMASTER_HOST", "")
+
+    if not all([token, user_id, host_id]):
+        return {"error": "missing_credentials"}
+
+    result = {"source": "yandex_webmaster"}
+    summary = ywm_get_summary(token, user_id, host_id)
+    result["summary"] = summary or None
+
+    indexing = ywm_get_indexing_history(token, user_id, host_id, date_str)
+    result["indexing_history_latest"] = indexing or None
+
+    queries = ywm_get_top_queries(token, user_id, host_id)
+    result["top_queries"] = queries
+    if not queries:
+        print("WARN: Block A top_queries empty", file=sys.stderr)
+
     return result
 
 
-def fetch_ywm_sitemaps() -> list:
-    """Статус sitemap.xml."""
-    d = safe_get(
-        f"https://api.webmaster.yandex.net/v4/user/{YA_USER}/hosts/{YA_HOST}/sitemaps",
-        label="YWM sitemaps",
+# ---------------------------------------------------------------------------
+# Блок B: Google Search Console API v1
+# ---------------------------------------------------------------------------
+
+def gsc_get_access_token(client_id: str, client_secret: str, refresh_token: str) -> str:
+    try:
+        r = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token",
+            },
+            timeout=15,
+        )
+        if r.status_code == 200:
+            return r.json().get("access_token", "")
+        print(f"ERROR: GSC token refresh {r.status_code}: {r.text[:200]}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: GSC token refresh: {e}", file=sys.stderr)
+    return ""
+
+
+def gsc_search_analytics(access_token: str, site_url: str, date_str: str,
+                          dimensions: list, row_limit: int = 30) -> list:
+    end_dt = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=3)
+    start_dt = end_dt - timedelta(days=90)
+
+    url = (
+        f"https://www.googleapis.com/webmasters/v3/sites/"
+        f"{requests.utils.quote(site_url, safe='')}/searchAnalytics/query"
     )
-    if not d:
-        return []
-    return [
+    body = {
+        "startDate": start_dt.strftime("%Y-%m-%d"),
+        "endDate": end_dt.strftime("%Y-%m-%d"),
+        "dimensions": dimensions,
+        "rowLimit": row_limit,
+    }
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+    try:
+        r = requests.post(url, headers=headers, json=body, timeout=20)
+        if r.status_code == 200:
+            return r.json().get("rows", [])
+        print(f"ERROR: GSC searchAnalytics {r.status_code}: {r.text[:300]}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: GSC searchAnalytics: {e}", file=sys.stderr)
+    return []
+
+
+def collect_block_b(cfg: dict, date_str: str) -> dict:
+    client_id = cfg.get("GOOGLE_CLIENT_ID", "")
+    client_secret = cfg.get("GOOGLE_CLIENT_SECRET", "")
+    refresh_token = cfg.get("GOOGLE_REFRESH_TOKEN", "")
+    site_url = cfg.get("GSC_SITE_URL", "")
+
+    if not all([client_id, client_secret, refresh_token, site_url]):
+        return {"error": "missing_credentials"}
+
+    access_token = gsc_get_access_token(client_id, client_secret, refresh_token)
+    if not access_token:
+        return {"error": "token_refresh_failed"}
+
+    result = {"source": "google_search_console", "site_url": site_url}
+
+    query_rows = gsc_search_analytics(access_token, site_url, date_str, ["query"], row_limit=30)
+    result["top_queries"] = [
         {
-            "url": s.get("sitemap_url"),
-            "pages": s.get("searchable_urls_count"),
-            "last_access": s.get("last_access_date"),
+            "query": r.get("keys", [""])[0],
+            "clicks": r.get("clicks", 0),
+            "impressions": r.get("impressions", 0),
+            "ctr": round(r.get("ctr", 0), 4),
+            "position": round(r.get("position", 0), 1),
         }
-        for s in d.get("sitemaps", [])[:5]
+        for r in query_rows
     ]
 
+    page_rows = gsc_search_analytics(access_token, site_url, date_str, ["page"], row_limit=20)
+    result["top_pages"] = [
+        {
+            "page": r.get("keys", [""])[0],
+            "clicks": r.get("clicks", 0),
+            "impressions": r.get("impressions", 0),
+            "ctr": round(r.get("ctr", 0), 4),
+            "position": round(r.get("position", 0), 1),
+        }
+        for r in page_rows
+    ]
 
-def fetch_ywm_top_queries() -> list:
-    """Топ-10 запросов за неделю."""
-    d = safe_get(
-        f"https://api.webmaster.yandex.net/v4/user/{YA_USER}/hosts/{YA_HOST}/search-queries/popular",
-        params={
-            "order_by": "TOTAL_CLICKS",
-            "query_indicator": ["TOTAL_CLICKS", "TOTAL_SHOWS", "AVG_CLICK_POSITION"],
-            "date_from": WEEK_AGO,
-            "date_to": TODAY,
-            "limit": 10,
-        },
-        label="YWM queries",
-    )
-    if not d:
-        return []
-    result = []
-    for q in d.get("queries", [])[:10]:
-        ind = q.get("indicators", {})
-        result.append({
-            "query": q.get("query_text"),
-            "clicks": int(ind.get("TOTAL_CLICKS") or 0),
-            "shows": int(ind.get("TOTAL_SHOWS") or 0),
-            "avg_position": round(float(ind.get("AVG_CLICK_POSITION") or ind.get("AVG_SHOW_POSITION") or 0), 1),
-        })
+    total_clicks = sum(q["clicks"] for q in result["top_queries"])
+    total_impr = sum(q["impressions"] for q in result["top_queries"])
+    result["totals_90d"] = {
+        "total_clicks": total_clicks,
+        "total_impressions": total_impr,
+        "avg_ctr": round(total_clicks / total_impr, 4) if total_impr > 0 else 0,
+        "queries_count": len(result["top_queries"]),
+    }
+
+    if not query_rows:
+        print("WARN: Block B top_queries empty", file=sys.stderr)
+
     return result
 
 
-def fetch_block_a() -> dict:
-    print("[A] Yandex Webmaster — индексация...", flush=True)
-    return {
-        "summary": fetch_ywm_summary(),
-        "index_history": fetch_ywm_index_history(),
-        "excluded_pages": fetch_ywm_excluded(),
-        "diagnostics": fetch_ywm_diagnostics(),
-        "sitemaps": fetch_ywm_sitemaps(),
-        "top_queries_week": fetch_ywm_top_queries(),
-    }
-
-
 # ---------------------------------------------------------------------------
-# Block C — Yandex Metrika (поведение)
+# Блок C: Yandex Metrika API stat/v1
 # ---------------------------------------------------------------------------
 
-def ym_stat(metrics: list, dimensions: list = None, params: dict = None) -> dict | None:
-    """Запрос к stat/v1/data."""
-    base_params = {
-        "ids": YA_COUNTER,
-        "metrics": ",".join(metrics),
-        "date1": WEEK_AGO,
-        "date2": YESTERDAY,
-        "limit": 20,
+def ym_headers(token: str) -> dict:
+    return {"Authorization": f"OAuth {token}"}
+
+
+def ym_stat(token: str, counter: str, metrics: str, dimensions: str = None,
+            date1: str = "7daysAgo", date2: str = "today", limit: int = 20) -> dict:
+    params = {
+        "id": counter,
+        "metrics": metrics,
+        "date1": date1,
+        "date2": date2,
+        "limit": limit,
+        "accuracy": "full",
     }
     if dimensions:
-        base_params["dimensions"] = ",".join(dimensions)
-        base_params["sort"] = f"-{metrics[0]}"
-    if params:
-        base_params.update(params)
-
-    return safe_get(
-        "https://api-metrika.yandex.net/stat/v1/data",
-        params=base_params,
-        label=f"YM stat {metrics[0]}",
-    )
-
-
-def fetch_ym_totals() -> dict:
-    """Суммарные метрики за неделю: сессии, пользователи, отказы, глубина, время."""
-    d = ym_stat(
-        ["ym:s:visits", "ym:s:users", "ym:s:bounceRate", "ym:s:pageDepth", "ym:s:avgVisitDurationSeconds"],
-    )
-    if not d:
-        return {"error": "no data"}
-    totals = d.get("totals", [])
-    if not totals:
-        return {"error": "empty totals"}
-    return {
-        "visits": int(totals[0]) if totals else None,
-        "users": int(totals[1]) if len(totals) > 1 else None,
-        "bounce_rate_pct": round(float(totals[2]), 1) if len(totals) > 2 else None,
-        "page_depth": round(float(totals[3]), 2) if len(totals) > 3 else None,
-        "avg_duration_sec": int(totals[4]) if len(totals) > 4 else None,
-        "period": f"{WEEK_AGO} → {YESTERDAY}",
-    }
-
-
-def fetch_ym_top_entries() -> list:
-    """Топ-10 страниц входа за неделю."""
-    d = ym_stat(
-        ["ym:s:visits"],
-        dimensions=["ym:s:startURL"],
-    )
-    if not d:
-        return []
-    result = []
-    for row in d.get("data", [])[:10]:
-        dim = row.get("dimensions", [{}])[0]
-        url = dim.get("name") or dim.get("id", "")
-        visits = int(row.get("metrics", [0])[0])
-        result.append({"url": url, "visits": visits})
-    return result
-
-
-def fetch_ym_sources() -> list:
-    """Источники трафика за неделю."""
-    d = ym_stat(
-        ["ym:s:visits"],
-        dimensions=["ym:s:lastTrafficSource"],
-    )
-    if not d:
-        return []
-    result = []
-    for row in d.get("data", [])[:10]:
-        dim = row.get("dimensions", [{}])[0]
-        src = dim.get("name") or dim.get("id", "")
-        visits = int(row.get("metrics", [0])[0])
-        result.append({"source": src, "visits": visits})
-    return result
-
-
-def fetch_ym_funnel() -> dict:
-    """Воронка: главная → услуга → калькулятор → заявка.
-    Используем фильтрацию по URL startsWith для каждого шага.
-    """
-    steps = {
-        "homepage": "/",
-        "service": "/uslugi",
-        "calculator": "/calculator",
-        "lead": "/spasibo",  # thank-you page или event submit
-    }
-    funnel_data = {}
-    for step_name, url_filter in steps.items():
-        d = safe_get(
+        params["dimensions"] = dimensions
+    try:
+        r = requests.get(
             "https://api-metrika.yandex.net/stat/v1/data",
-            params={
-                "ids": YA_COUNTER,
-                "metrics": "ym:s:visits",
-                "date1": WEEK_AGO,
-                "date2": YESTERDAY,
-                "filters": f"ym:s:startURL=~'{url_filter}'",
-            },
-            label=f"YM funnel {step_name}",
+            headers=ym_headers(token),
+            params=params,
+            timeout=20,
         )
-        if d and d.get("totals"):
-            funnel_data[step_name] = int(d["totals"][0])
-        else:
-            funnel_data[step_name] = None
+        if r.status_code == 200:
+            return r.json()
+        print(f"WARN: YM stat {r.status_code} [{metrics}]: {r.text[:200]}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: YM stat [{metrics}]: {e}", file=sys.stderr)
+    return {}
 
-    # Конверсии между шагами
-    result = {"raw": funnel_data}
-    steps_list = list(steps.keys())
-    conversions = {}
-    for i in range(1, len(steps_list)):
-        prev = steps_list[i - 1]
-        curr = steps_list[i]
-        prev_val = funnel_data.get(prev)
-        curr_val = funnel_data.get(curr)
-        if prev_val and curr_val is not None:
-            conversions[f"{prev}->{curr}"] = round(curr_val / prev_val * 100, 1)
-        else:
-            conversions[f"{prev}->{curr}"] = None
-    # Дополнительно: homepage→calculator напрямую
-    hp = funnel_data.get("homepage")
-    calc = funnel_data.get("calculator")
-    if hp and calc is not None:
-        conversions["homepage->calculator"] = round(calc / hp * 100, 1)
-    result["conversions_pct"] = conversions
+
+def collect_block_c(cfg: dict, date_str: str) -> dict:
+    token = cfg.get("YA_OAUTH_TOKEN", "")
+    counter = cfg.get("YA_METRIKA_COUNTER", "")
+
+    if not all([token, counter]):
+        return {"error": "missing_credentials"}
+
+    result = {"source": "yandex_metrika", "counter": counter}
+
+    totals = ym_stat(token, counter,
+                     "ym:s:visits,ym:s:users,ym:s:bounceRate,ym:s:pageDepth,ym:s:avgVisitDurationSeconds")
+    if totals:
+        vals = totals.get("totals", [])
+        if vals:
+            result["totals_7d"] = {
+                "visits": vals[0],
+                "users": vals[1],
+                "bounce_rate": round(vals[2], 3) if len(vals) > 2 else None,
+                "page_depth": round(vals[3], 2) if len(vals) > 3 else None,
+                "avg_visit_duration_sec": round(vals[4], 1) if len(vals) > 4 else None,
+            }
+
+    entries = ym_stat(token, counter, "ym:s:visits,ym:s:users",
+                      dimensions="ym:s:startURL", limit=10)
+    result["top_entries"] = [
+        {
+            "url": row.get("dimensions", [{}])[0].get("name", ""),
+            "visits": row.get("metrics", [0, 0])[0],
+            "users": row.get("metrics", [0, 0])[1],
+        }
+        for row in entries.get("data", [])
+    ] if entries else []
+
+    sources = ym_stat(token, counter, "ym:s:visits",
+                      dimensions="ym:s:trafficSource", limit=10)
+    result["traffic_sources"] = [
+        {
+            "source": row.get("dimensions", [{}])[0].get("name", ""),
+            "visits": row.get("metrics", [0])[0],
+        }
+        for row in sources.get("data", [])
+    ] if sources else []
+
     return result
 
 
-def fetch_block_c() -> dict:
-    print("[C] Yandex Metrika — поведение...", flush=True)
+# ---------------------------------------------------------------------------
+# Блок D: GA4 Data API v1beta
+# ---------------------------------------------------------------------------
+
+def ga4_run_report(access_token: str, property_id: str, dimensions: list,
+                   metrics: list, date_ranges: list, limit: int = 20) -> dict:
+    url = f"https://analyticsdata.googleapis.com/v1beta/properties/{property_id}:runReport"
+    body = {
+        "dateRanges": date_ranges,
+        "dimensions": [{"name": d} for d in dimensions],
+        "metrics": [{"name": m} for m in metrics],
+        "limit": limit,
+    }
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+    try:
+        r = requests.post(url, headers=headers, json=body, timeout=20)
+        if r.status_code == 200:
+            return r.json()
+        print(f"ERROR: GA4 runReport {r.status_code} [{metrics}]: {r.text[:300]}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: GA4 runReport [{metrics}]: {e}", file=sys.stderr)
+    return {}
+
+
+def collect_block_d(cfg: dict, date_str: str) -> dict:
+    client_id = cfg.get("GOOGLE_CLIENT_ID", "")
+    client_secret = cfg.get("GOOGLE_CLIENT_SECRET", "")
+    refresh_token = cfg.get("GOOGLE_REFRESH_TOKEN", "")
+    property_id = cfg.get("GA4_PROPERTY_ID", "")
+
+    if not all([client_id, client_secret, refresh_token, property_id]):
+        return {"error": "missing_credentials"}
+
+    access_token = gsc_get_access_token(client_id, client_secret, refresh_token)
+    if not access_token:
+        return {"error": "token_refresh_failed"}
+
+    result = {"source": "ga4", "property_id": property_id}
+    dr_7d = [{"startDate": "7daysAgo", "endDate": "yesterday"}]
+    dr_30d = [{"startDate": "30daysAgo", "endDate": "yesterday"}]
+
+    totals = ga4_run_report(
+        access_token, property_id,
+        dimensions=[],
+        metrics=["sessions", "activeUsers", "bounceRate",
+                 "screenPageViewsPerSession", "averageSessionDuration"],
+        date_ranges=dr_7d, limit=1,
+    )
+    if totals and totals.get("rows"):
+        vals = [v.get("value", "0") for v in totals["rows"][0].get("metricValues", [])]
+        result["totals_7d"] = {
+            "sessions": int(float(vals[0])) if len(vals) > 0 else None,
+            "active_users": int(float(vals[1])) if len(vals) > 1 else None,
+            "bounce_rate": round(float(vals[2]), 3) if len(vals) > 2 else None,
+            "pages_per_session": round(float(vals[3]), 2) if len(vals) > 3 else None,
+            "avg_session_duration_sec": round(float(vals[4]), 1) if len(vals) > 4 else None,
+        }
+    else:
+        result["totals_7d"] = None
+        print("WARN: Block D totals_7d empty", file=sys.stderr)
+
+    sources = ga4_run_report(
+        access_token, property_id,
+        dimensions=["sessionDefaultChannelGrouping"],
+        metrics=["sessions", "activeUsers"],
+        date_ranges=dr_30d, limit=10,
+    )
+    result["traffic_sources_30d"] = [
+        {
+            "channel": row.get("dimensionValues", [{}])[0].get("value", ""),
+            "sessions": int(float(row.get("metricValues", [{"value": "0"}])[0].get("value", 0))),
+            "users": int(float(row.get("metricValues", [{}, {"value": "0"}])[1].get("value", 0))),
+        }
+        for row in sources.get("rows", [])
+    ] if sources else []
+
+    leads = ga4_run_report(
+        access_token, property_id,
+        dimensions=["eventName"],
+        metrics=["eventCount"],
+        date_ranges=dr_30d, limit=50,
+    )
+    lead_count = 0
+    if leads:
+        for row in leads.get("rows", []):
+            if row.get("dimensionValues", [{}])[0].get("value") == "lead_submit":
+                lead_count = int(float(row.get("metricValues", [{"value": "0"}])[0].get("value", 0)))
+                break
+    result["lead_submit_30d"] = lead_count
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Блок E: Заявки (IMAP + Telegram bot)
+# ---------------------------------------------------------------------------
+
+def fetch_imap_leads(cfg: dict, date_str: str) -> list:
+    """Читает входящие письма за дату из IMAP и возвращает список заявок."""
+    host = cfg.get("IMAP_HOST", "mail.beget.com")
+    user = cfg.get("IMAP_USER", "")
+    passwd = cfg.get("IMAP_PASS", "")
+
+    if not all([user, passwd]):
+        print("WARN: IMAP credentials missing", file=sys.stderr)
+        return []
+
+    leads = []
+    try:
+        conn = imaplib.IMAP4_SSL(host, 993)
+        conn.login(user, passwd)
+        conn.select("INBOX")
+
+        # Поиск писем за дату
+        target_date = datetime.strptime(date_str, "%Y-%m-%d")
+        imap_date = target_date.strftime("%d-%b-%Y")
+        _, msg_ids = conn.search(None, f'ON "{imap_date}"')
+
+        for mid in (msg_ids[0] or b"").split():
+            _, data = conn.fetch(mid, "(RFC822)")
+            raw = data[0][1] if data and data[0] else None
+            if not raw:
+                continue
+            msg = email.message_from_bytes(raw)
+            subject = msg.get("Subject", "")
+            from_addr = msg.get("From", "")
+            date_header = msg.get("Date", "")
+
+            # Определяем источник по Referer/utm в теле
+            body_text = ""
+            if msg.is_multipart():
+                for part in msg.walk():
+                    if part.get_content_type() == "text/plain":
+                        body_text = part.get_payload(decode=True).decode("utf-8", errors="ignore")
+                        break
+            else:
+                payload = msg.get_payload(decode=True)
+                if payload:
+                    body_text = payload.decode("utf-8", errors="ignore")
+
+            source = "email_unknown"
+            body_lower = body_text.lower()
+            if "utm_source=yandex" in body_lower or "yandex" in body_lower:
+                source = "organic_yandex"
+            elif "utm_source=google" in body_lower or "google" in body_lower:
+                source = "organic_google"
+            elif "utm_medium=referral" in body_lower:
+                source = "referral"
+            elif "direct" in body_lower:
+                source = "direct"
+
+            leads.append({
+                "channel": "email",
+                "source": source,
+                "subject": subject[:100],
+                "from": from_addr[:100],
+                "date": date_header[:50],
+            })
+
+        conn.logout()
+    except imaplib.IMAP4.error as e:
+        print(f"ERROR: IMAP auth/connection: {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"ERROR: IMAP fetch: {e}", file=sys.stderr)
+
+    return leads
+
+
+def fetch_telegram_leads(cfg: dict, date_str: str) -> list:
+    """
+    Собирает заявки из Telegram-бота за дату.
+    Использует Bot API getUpdates (работает локально; на продакшне — через лог-файл).
+    """
+    token = cfg.get("TELEGRAM_BOT_TOKEN", "")
+    if not token:
+        print("WARN: TELEGRAM_BOT_TOKEN not set — skipping TG leads", file=sys.stderr)
+        return []
+
+    target_dt = datetime.strptime(date_str, "%Y-%m-%d")
+    start_ts = int(target_dt.timestamp())
+    end_ts = int((target_dt + timedelta(days=1)).timestamp())
+
+    proxy = cfg.get("TELEGRAM_PROXY_URL", "")
+    proxies = {"http": proxy, "https": proxy} if proxy else None
+
+    leads = []
+    try:
+        url = f"https://api.telegram.org/bot{token}/getUpdates"
+        params = {"limit": 100, "timeout": 5}
+        r = requests.get(url, params=params, proxies=proxies, timeout=20)
+        if r.status_code != 200:
+            print(f"WARN: TG getUpdates {r.status_code}", file=sys.stderr)
+            return []
+
+        updates = r.json().get("result", [])
+        for upd in updates:
+            msg = upd.get("message", {})
+            ts = msg.get("date", 0)
+            if not (start_ts <= ts < end_ts):
+                continue
+            text = msg.get("text", "")
+            # Считаем заявкой сообщение с контактными данными или словом "заявка"
+            keywords = ["заявк", "телефон", "перезвон", "звоните", "свяжи", "калькулятор"]
+            if any(kw in text.lower() for kw in keywords):
+                leads.append({
+                    "channel": "telegram",
+                    "source": "direct_tg",
+                    "text_preview": text[:100],
+                    "date": datetime.utcfromtimestamp(ts).isoformat() + "Z",
+                })
+    except Exception as e:
+        print(f"ERROR: TG fetch: {e}", file=sys.stderr)
+
+    return leads
+
+
+def collect_block_e(cfg: dict, date_str: str) -> dict:
+    """Блок E: заявки из IMAP + Telegram."""
+    print("[INFO] Collecting Block E: TG + IMAP leads...", file=sys.stderr)
+
+    imap_leads = fetch_imap_leads(cfg, date_str)
+    tg_leads = fetch_telegram_leads(cfg, date_str)
+
+    all_leads = imap_leads + tg_leads
     return {
-        "totals_week": fetch_ym_totals(),
-        "top_entries": fetch_ym_top_entries(),
-        "sources": fetch_ym_sources(),
-        "funnel": fetch_ym_funnel(),
+        "source": "leads_aggregator",
+        "date": date_str,
+        "total": len(all_leads),
+        "email_count": len(imap_leads),
+        "telegram_count": len(tg_leads),
+        "leads": all_leads,
     }
 
 
 # ---------------------------------------------------------------------------
-# Render Markdown report
+# Markdown render
 # ---------------------------------------------------------------------------
 
-def render_markdown(data: dict) -> str:
-    a = data.get("block_a", {})
-    c = data.get("block_c", {})
-    ts = data.get("collected_at", TODAY)
+def _pct(val) -> str:
+    if val is None:
+        return "n/a"
+    return f"{round(float(val) * 100, 1)}%"
+
+
+def render_markdown(data: dict, date_str: str) -> str:
+    ts = data.get("meta", {}).get("generated", date_str)
+    blocks = data.get("blocks", {})
+    a = blocks.get("A_indexing", {})
+    b = blocks.get("B_gsc", {})
+    c = blocks.get("C_behavior", {})
+    d = blocks.get("D_ga4", {})
+    e = blocks.get("E_leads", {})
 
     lines = [
-        f"# Ежедневный отчёт mspro-ltd.ru — {TODAY}",
+        f"# Ежедневный отчёт mspro-ltd.ru — {date_str}",
         f"",
         f"_Собрано: {ts}_",
         f"",
         f"---",
         f"",
-        f"## Блок A. Индексация Яндекс",
-        f"",
     ]
 
-    # Summary
-    summary = a.get("summary", {})
-    if "error" not in summary:
+    # ── Блок A: Индексация Яндекс ───────────────────────────────────────────
+    lines += ["## Блок A. Индексация Яндекс", ""]
+    if a.get("error"):
+        lines.append(f"- Ошибка: {a['error']}")
+    else:
+        s = a.get("summary") or {}
         lines += [
-            f"- **SQI:** {summary.get('sqi', 'n/a')}",
-            f"- **Страниц в индексе:** {summary.get('indexed', 'n/a')}",
-            f"- **Исключено:** {summary.get('excluded', 'n/a')}",
+            f"- **SQI:** {s.get('sqi', 'n/a')}",
+            f"- **Страниц в индексе:** {s.get('searchable_pages_count', 'n/a')}",
+            f"- **Всего страниц:** {s.get('pages_count', 'n/a')}",
+            f"- **Исключено:** {s.get('excluded_pages_count', 'n/a')}",
+            "",
         ]
-        probs = summary.get("problems", {})
-        if probs:
-            for k, v in probs.items():
-                lines.append(f"- **Проблемы [{k}]:** {v}")
+        ih = a.get("indexing_history_latest") or {}
+        if ih:
+            prev = ih.get("prev_total") or 0
+            total = ih.get("total_urls_count") or 0
+            delta = total - prev if prev else 0
+            sign = "+" if delta >= 0 else ""
+            lines.append(f"**Дельта индексации (сутки):** {sign}{delta} (было: {prev}, стало: {total})")
+            lines.append("")
+
+        ywm_queries = a.get("top_queries", [])
+        if ywm_queries:
+            lines += [
+                "### Топ запросов Яндекс (7 дней)",
+                "| Запрос | Клики | Показы | Позиция |",
+                "|--------|-------|--------|---------|",
+            ]
+            for q in ywm_queries[:10]:
+                lines.append(f"| {q.get('query', 'n/a')} | {q.get('clicks', 0)} | {q.get('impressions', 0)} | {q.get('position', 'n/a')} |")
+            lines.append("")
+
+    # ── Блок B: Поисковый трафик Google ─────────────────────────────────────
+    lines += ["---", "", "## Блок B. Поисковый трафик Google (GSC)", ""]
+    if b.get("error"):
+        lines.append(f"- Ошибка: {b['error']}")
     else:
-        lines.append(f"- Сводка: нет данных")
-
-    lines.append("")
-
-    # Index history delta
-    hist = a.get("index_history", {})
-    if "error" not in hist and hist.get("delta") is not None:
-        delta = hist["delta"]
-        sign = "+" if delta >= 0 else ""
-        lines.append(f"**Дельта индексации за сутки:** {sign}{delta} страниц (было: {hist.get('prev_count')}, стало: {hist.get('today_count')})")
-    else:
-        lines.append("**Дельта индексации:** нет данных")
-
-    lines.append("")
-
-    # Diagnostics
-    diag = a.get("diagnostics", [])
-    if diag:
-        lines.append("### Проблемы диагностики")
-        for d in diag[:5]:
-            lines.append(f"- [{d.get('severity', '?')}] {d.get('title', d.get('type', '?'))}")
-        lines.append("")
-
-    # Excluded pages
-    excl = a.get("excluded_pages", [])
-    if excl:
-        lines.append("### Исключённые страницы (топ-10)")
-        lines.append("| URL | Причина | Дата |")
-        lines.append("|-----|---------|------|")
-        for p in excl[:10]:
-            lines.append(f"| {p.get('url', 'n/a')} | {p.get('reason', 'n/a')} | {p.get('date', 'n/a')} |")
-        lines.append("")
-
-    # Top queries
-    queries = a.get("top_queries_week", [])
-    if queries:
-        lines.append("### Топ запросов (7 дней)")
-        lines.append("| Запрос | Клики | Показы | Позиция |")
-        lines.append("|--------|-------|--------|---------|")
-        for q in queries[:10]:
-            lines.append(f"| {q.get('query', 'n/a')} | {q.get('clicks', 0)} | {q.get('shows', 0)} | {q.get('avg_position', 'n/a')} |")
-        lines.append("")
-
-    # Sitemaps
-    sitemaps = a.get("sitemaps", [])
-    if sitemaps:
-        lines.append("### Sitemap.xml")
-        for s in sitemaps:
-            lines.append(f"- {s.get('url', 'n/a')} | страниц: {s.get('pages', 'n/a')} | последний доступ: {s.get('last_access', 'n/a')}")
-        lines.append("")
-
-    lines += [
-        "---",
-        "",
-        "## Блок C. Поведение Яндекс.Метрика",
-        "",
-    ]
-
-    # Totals
-    totals = c.get("totals_week", {})
-    if "error" not in totals:
+        t = b.get("totals_90d", {})
         lines += [
-            f"**Период:** {totals.get('period', 'n/a')}",
+            f"**Период:** 90 дней (с лагом GSC ~3 дня)",
             f"",
             f"| Метрика | Значение |",
             f"|---------|----------|",
-            f"| Сессии | {totals.get('visits', 'n/a')} |",
-            f"| Пользователи | {totals.get('users', 'n/a')} |",
-            f"| Отказы | {totals.get('bounce_rate_pct', 'n/a')}% |",
-            f"| Глубина просмотра | {totals.get('page_depth', 'n/a')} стр. |",
-            f"| Среднее время (сек) | {totals.get('avg_duration_sec', 'n/a')} |",
+            f"| Клики | {t.get('total_clicks', 'n/a')} |",
+            f"| Показы | {t.get('total_impressions', 'n/a')} |",
+            f"| Ср. CTR | {round(t.get('avg_ctr', 0) * 100, 2)}% |",
+            f"| Запросов (уник.) | {t.get('queries_count', 'n/a')} |",
             f"",
         ]
+
+        gsc_queries = b.get("top_queries", [])
+        if gsc_queries:
+            lines += [
+                "### Топ-30 запросов Google",
+                "| Запрос | Клики | Показы | CTR | Позиция |",
+                "|--------|-------|--------|-----|---------|",
+            ]
+            for q in gsc_queries[:15]:
+                ctr_str = f"{round(q.get('ctr', 0) * 100, 1)}%"
+                lines.append(f"| {q.get('query', 'n/a')} | {q.get('clicks', 0)} | {q.get('impressions', 0)} | {ctr_str} | {q.get('position', 'n/a')} |")
+            lines.append("")
+
+        gsc_pages = b.get("top_pages", [])
+        if gsc_pages:
+            lines += [
+                "### Топ страниц Google",
+                "| Страница | Клики | Показы | Позиция |",
+                "|----------|-------|--------|---------|",
+            ]
+            for p in gsc_pages[:10]:
+                lines.append(f"| {p.get('page', 'n/a')} | {p.get('clicks', 0)} | {p.get('impressions', 0)} | {p.get('position', 'n/a')} |")
+            lines.append("")
+
+    # ── Блок C: Поведение Яндекс.Метрика ────────────────────────────────────
+    lines += ["---", "", "## Блок C. Поведение (Яндекс.Метрика + GA4)", ""]
+
+    if c.get("error"):
+        lines.append(f"- Яндекс.Метрика ошибка: {c['error']}")
     else:
-        lines.append("Данные Метрики: нет данных\n")
+        ct = c.get("totals_7d") or {}
+        if ct:
+            br = ct.get("bounce_rate")
+            br_str = f"{round(float(br), 1)}%" if br is not None else "n/a"
+            lines += [
+                "### Яндекс.Метрика (7 дней)",
+                "",
+                "| Метрика | Значение |",
+                "|---------|----------|",
+                f"| Сессии | {int(ct.get('visits', 0)) if ct.get('visits') is not None else 'n/a'} |",
+                f"| Пользователи | {int(ct.get('users', 0)) if ct.get('users') is not None else 'n/a'} |",
+                f"| Отказы | {br_str} |",
+                f"| Глубина | {ct.get('page_depth', 'n/a')} стр. |",
+                f"| Ср. время | {ct.get('avg_visit_duration_sec', 'n/a')} сек |",
+                "",
+            ]
 
-    # Top entries
-    entries = c.get("top_entries", [])
-    if entries:
-        lines.append("### Топ-10 страниц входа")
-        lines.append("| URL | Визиты |")
-        lines.append("|-----|--------|")
-        for e in entries[:10]:
-            lines.append(f"| {e.get('url', 'n/a')} | {e.get('visits', 0)} |")
-        lines.append("")
+        ym_entries = c.get("top_entries", [])
+        if ym_entries:
+            lines += [
+                "### Топ-10 страниц входа (YM)",
+                "| URL | Визиты |",
+                "|-----|--------|",
+            ]
+            for e_row in ym_entries[:10]:
+                v = e_row.get("visits", 0)
+                lines.append(f"| {e_row.get('url', 'n/a')} | {int(v) if v is not None else 0} |")
+            lines.append("")
 
-    # Sources
-    sources = c.get("sources", [])
-    if sources:
-        lines.append("### Источники трафика")
-        lines.append("| Источник | Визиты |")
-        lines.append("|----------|--------|")
-        for s in sources[:10]:
-            lines.append(f"| {s.get('source', 'n/a')} | {s.get('visits', 0)} |")
-        lines.append("")
+        ym_src = c.get("traffic_sources", [])
+        if ym_src:
+            lines += [
+                "### Источники трафика (YM)",
+                "| Источник | Визиты |",
+                "|----------|--------|",
+            ]
+            for s_row in ym_src[:8]:
+                v = s_row.get("visits", 0)
+                lines.append(f"| {s_row.get('source', 'n/a')} | {int(v) if v is not None else 0} |")
+            lines.append("")
 
-    # Funnel
-    funnel = c.get("funnel", {})
-    raw = funnel.get("raw", {})
-    conversions = funnel.get("conversions_pct", {})
-    if raw:
-        lines.append("### Воронка конверсий")
-        lines.append("| Шаг | Визиты |")
-        lines.append("|-----|--------|")
-        for step, val in raw.items():
-            lines.append(f"| {step} | {val if val is not None else 'n/a'} |")
-        lines.append("")
-        if conversions:
-            lines.append("**Конверсии:**")
-            for transition, pct in conversions.items():
-                lines.append(f"- {transition}: {pct}%" if pct is not None else f"- {transition}: n/a")
+    if d.get("error"):
+        lines.append(f"- GA4 ошибка: {d['error']}")
+    else:
+        dt = d.get("totals_7d") or {}
+        if dt:
+            lines += [
+                "### GA4 (7 дней)",
+                "",
+                "| Метрика | Значение |",
+                "|---------|----------|",
+                f"| Сессии | {dt.get('sessions', 'n/a')} |",
+                f"| Пользователи | {dt.get('active_users', 'n/a')} |",
+                f"| Bounce | {_pct(dt.get('bounce_rate'))} |",
+                f"| Стр./сессию | {dt.get('pages_per_session', 'n/a')} |",
+                f"| Ср. длит. (сек) | {dt.get('avg_session_duration_sec', 'n/a')} |",
+                "",
+            ]
+
+        ga4_src = d.get("traffic_sources_30d", [])
+        if ga4_src:
+            lines += [
+                "### Источники трафика GA4 (30 дней)",
+                "| Канал | Сессии | Пользователи |",
+                "|-------|--------|--------------|",
+            ]
+            for s_row in ga4_src:
+                lines.append(f"| {s_row.get('channel', 'n/a')} | {s_row.get('sessions', 0)} | {s_row.get('users', 0)} |")
+            lines.append("")
+
+    # ── Блок D: Конверсии ────────────────────────────────────────────────────
+    lines += ["---", "", "## Блок D. Конверсии", ""]
+
+    ga4_leads = d.get("lead_submit_30d", 0) if not d.get("error") else "n/a"
+    e_total = e.get("total", 0) if not e.get("error") else "n/a"
+    e_email = e.get("email_count", 0)
+    e_tg = e.get("telegram_count", 0)
+
+    lines += [
+        "| Источник | Заявок |",
+        "|----------|--------|",
+        f"| GA4 lead_submit (30д) | {ga4_leads} |",
+        f"| Email (IMAP, сутки) | {e_email} |",
+        f"| Telegram (бот, сутки) | {e_tg} |",
+        f"| **Итого за сутки** | **{e_total}** |",
+        "",
+    ]
+
+    if e.get("leads"):
+        lines += ["### Детали заявок", ""]
+        for lead in e["leads"][:10]:
+            ch = lead.get("channel", "?")
+            src = lead.get("source", "?")
+            dt_str = lead.get("date", "?")
+            preview = lead.get("text_preview") or lead.get("subject") or ""
+            lines.append(f"- [{ch}] {src} — {dt_str[:16]} — {preview[:60]}")
         lines.append("")
 
     lines += [
         "---",
         "",
-        f"_Отчёт создан автоматически daily-analytics.py (MSP-52, этап 2)._",
-        f"_Этапы 3–4 (GSC, GA4, заявки) будут добавлены в MSP-53 / MSP-54._",
+        f"_Отчёт создан автоматически daily-analytics.py v2.0 (MSP-54)._",
     ]
 
     return "\n".join(lines)
@@ -535,36 +859,96 @@ def render_markdown(data: dict) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
-def main() -> int:
-    print(f"=== daily-analytics.py start — {TODAY} ===", flush=True)
+def run(date_str: str, dry_run: bool = False, secrets_dir: Path = None) -> dict:
+    if secrets_dir is None:
+        secrets_dir = find_secrets_dir()
 
-    if not YA_TOKEN:
-        log_err("YA_OAUTH_TOKEN не задан — выход")
-        return 1
+    cfg = build_cfg(secrets_dir)
 
-    payload = {
-        "date": TODAY,
-        "collected_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
-        "block_a": fetch_block_a(),
-        "block_b": {"status": "pending_msP53"},  # будет в MSP-53
-        "block_c": fetch_block_c(),
-        "block_d": {"status": "pending_msP54"},  # будет в MSP-54
+    if not cfg.get("YA_OAUTH_TOKEN"):
+        print("ERROR: YA_OAUTH_TOKEN not set — Yandex blocks will fail", file=sys.stderr)
+
+    errors = []
+    result = {
+        "meta": {
+            "generated": datetime.utcnow().isoformat() + "Z",
+            "date": date_str,
+            "script": "daily-analytics.py",
+            "version": "2.0.0",
+        },
+        "blocks": {},
     }
 
-    # Сохраняем JSON
-    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"[OK] JSON сохранён: {OUTPUT_JSON}", flush=True)
+    for block_id, label, collect_fn in [
+        ("A_indexing", "Yandex Webmaster", lambda: collect_block_a(cfg, date_str)),
+        ("B_gsc",      "Google Search Console", lambda: collect_block_b(cfg, date_str)),
+        ("C_behavior", "Yandex Metrika", lambda: collect_block_c(cfg, date_str)),
+        ("D_ga4",      "GA4 Data API", lambda: collect_block_d(cfg, date_str)),
+        ("E_leads",    "TG/IMAP Leads", lambda: collect_block_e(cfg, date_str)),
+    ]:
+        print(f"[INFO] Collecting Block {block_id}: {label}...", file=sys.stderr)
+        try:
+            block = collect_fn()
+            result["blocks"][block_id] = block
+            if block.get("error"):
+                errors.append(f"Block {block_id}: {block['error']}")
+        except Exception as exc:
+            traceback.print_exc(file=sys.stderr)
+            result["blocks"][block_id] = {"error": str(exc)}
+            errors.append(f"Block {block_id} fatal: {exc}")
 
-    # Рендерим Markdown
-    md = render_markdown(payload)
-    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
-        f.write(md)
-    print(f"[OK] Markdown сохранён: {OUTPUT_MD}", flush=True)
+    result["errors"] = errors
+    result["status"] = "partial" if errors else "ok"
 
-    print(f"=== done ===", flush=True)
-    return 0
+    if not dry_run:
+        repo_dir = find_repo_dir()
+
+        # JSON архив
+        out_dir = repo_dir / "_data" / "analytics"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / f"{date_str}.json"
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        print(f"[INFO] JSON written: {out_file}", file=sys.stderr)
+
+        # Markdown отчёт
+        md_dir = repo_dir / "shared" / "icos" / "daily"
+        md_dir.mkdir(parents=True, exist_ok=True)
+        md_file = md_dir / f"{date_str}.md"
+        md_content = render_markdown(result, date_str)
+        with open(md_file, "w", encoding="utf-8") as f:
+            f.write(md_content)
+        print(f"[INFO] Markdown written: {md_file}", file=sys.stderr)
+    else:
+        print("[INFO] DRY RUN — not writing files", file=sys.stderr)
+        md_content = render_markdown(result, date_str)
+        print("\n=== MARKDOWN PREVIEW ===\n")
+        print(md_content[:3000])
+
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Daily Analytics Pipeline v2.0 (MSP-54) — YWM + GSC + YM + GA4 + Leads"
+    )
+    parser.add_argument("--date", default=datetime.utcnow().strftime("%Y-%m-%d"),
+                        help="Дата отчёта YYYY-MM-DD (default: today UTC)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Не записывать файлы, только вывести результат")
+    parser.add_argument("--output", choices=["file", "stdout", "both"], default="file",
+                        help="Куда выводить JSON (default: file)")
+    args = parser.parse_args()
+
+    result = run(args.date, dry_run=args.dry_run)
+
+    if args.output in ("stdout", "both") or args.dry_run:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+
+    if result["status"] != "ok":
+        print(f"[WARN] Completed with errors: {result['errors']}", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
