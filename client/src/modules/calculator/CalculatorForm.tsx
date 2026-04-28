@@ -11,7 +11,7 @@ import { Calculator, Check, ChevronsUpDown, Info } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
-import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS, AnticorrosionType, ANTICORROSION_TYPES, FireproofingStructureType, FIREPROOFING_STRUCTURE_TYPES } from "@/lib/calculator-data";
+import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS, AnticorrosionType, ANTICORROSION_TYPES, FireproofingStructureType, FIREPROOFING_STRUCTURE_TYPES, SURFACE_PREP_SERVICES, ELEMENT_WIDTH_COEFS } from "@/lib/calculator-data";
 import { cn } from "@/lib/utils";
 import {
   Command,
@@ -43,6 +43,8 @@ interface CalculationResult {
   coatingIsPending: boolean;
   baseDays: number;
   optimisticDays: number;
+  surfacePrepCost: number;
+  prepServiceLabel: string | null;
   chimneyMaterialLabel?: string;
   surfacePrepLabel?: string;
   anticorrosionTypeLabel?: string;
@@ -61,6 +63,10 @@ export function CalculatorForm() {
   const [surfacePrep, setSurfacePrep] = useState<SurfacePrep>("manual");
   const [anticorrosionType, setAnticorrosionType] = useState<AnticorrosionType>("metalstructures");
   const [fireproofingStructureType, setFireproofingStructureType] = useState<FireproofingStructureType>("metalstructures");
+  const [prepServiceId, setPrepServiceId] = useState<string | null>(null);
+  const [prepMaterialId, setPrepMaterialId] = useState<string>("metal");
+  const [prepGradeId, setPrepGradeId] = useState<string>("sa25");
+  const [prepWidthId, setPrepWidthId] = useState<string>("w999");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -164,10 +170,27 @@ export function CalculatorForm() {
         }
       }
 
-      // 4. Total
-      const totalCost = laborCost + materialCost;
+      // 4. Surface prep cost (optional block)
+      let surfacePrepCost = 0;
+      let surfacePrepLabel: string | null = null;
+      if (prepServiceId) {
+        const prepService = SURFACE_PREP_SERVICES.find(s => s.id === prepServiceId);
+        if (prepService) {
+          const material = prepService.materials.find(m => m.id === prepMaterialId) || prepService.materials[0];
+          const gradeCoef = prepService.gradeCoefs?.find(g => g.id === prepGradeId)?.coef ?? 1.0;
+          const widthCoef = prepService.widthCoefs?.find(w => w.id === prepWidthId)?.coef ?? 1.0;
+          surfacePrepCost = parseFloat((surfaceArea * material.pricePerSqm * gradeCoef * widthCoef).toFixed(2));
+          const gradeLabel = prepService.gradeCoefs?.find(g => g.id === prepGradeId)?.label;
+          const widthLabel = prepService.widthCoefs?.find(w => w.id === prepWidthId)?.label;
+          const parts = [prepService.label, material.label, gradeLabel, widthLabel ? `ш. ${widthLabel}` : null].filter(Boolean);
+          surfacePrepLabel = parts.join(", ");
+        }
+      }
 
-      // 5. Deadline Estimation
+      // 5. Total
+      const totalCost = laborCost + materialCost + surfacePrepCost;
+
+      // 6. Deadline Estimation
       const baseDays = Math.ceil(surfaceArea / 80);
       const optimisticDays = Math.ceil(surfaceArea / 500);
 
@@ -187,6 +210,8 @@ export function CalculatorForm() {
         materialName: materialName,
         coatingIsPending,
         baseDays,
+        surfacePrepCost,
+        prepServiceLabel: surfacePrepLabel,
         optimisticDays,
         chimneyMaterialLabel: selectedService === "chimney_painting" ? CHIMNEY_MATERIALS[chimneyMaterial].label : undefined,
         surfacePrepLabel: (selectedService === "chimney_painting" || selectedService === "anticorrosion" || selectedService === "fireproofing") ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
@@ -473,6 +498,119 @@ export function CalculatorForm() {
               </div>
             )}
 
+            {/* Surface prep (optional) */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="enable-surface-prep"
+                  checked={prepServiceId !== null}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      const svc = SURFACE_PREP_SERVICES[0];
+                      setPrepServiceId(svc.id);
+                      setPrepMaterialId(svc.materials[0]?.id || "");
+                      setPrepGradeId(svc.gradeCoefs?.[0]?.id || "");
+                      setPrepWidthId("w999");
+                    } else {
+                      setPrepServiceId(null);
+                    }
+                  }}
+                />
+                <Label htmlFor="enable-surface-prep" className="cursor-pointer font-medium">
+                  Добавить подготовку поверхности
+                </Label>
+              </div>
+
+              {prepServiceId && (() => {
+                const prepSvc = SURFACE_PREP_SERVICES.find(s => s.id === prepServiceId);
+                return (
+                  <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+                    {/* Service selector */}
+                    <div className="space-y-2">
+                      <Label>Вид подготовки</Label>
+                      <Select
+                        value={prepServiceId}
+                        onValueChange={(v) => {
+                          const svc = SURFACE_PREP_SERVICES.find(s => s.id === v)!;
+                          setPrepServiceId(v);
+                          setPrepMaterialId(svc.materials[0]?.id || "");
+                          setPrepGradeId(svc.gradeCoefs?.[0]?.id || "");
+                          setPrepWidthId("w999");
+                        }}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {SURFACE_PREP_SERVICES.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {prepSvc && <p className="text-xs text-muted-foreground">{prepSvc.description}</p>}
+                    </div>
+
+                    {/* Material selector */}
+                    {prepSvc && prepSvc.materials.length > 1 && (
+                      <div className="space-y-2">
+                        <Label>Поверхность / способ</Label>
+                        <Select value={prepMaterialId} onValueChange={setPrepMaterialId}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {prepSvc.materials.map(m => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.label}{m.pricePerSqm > 0 ? ` — ${m.pricePerSqm} ₽/м²` : " — уточняется"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Grade coef selector */}
+                    {prepSvc?.gradeCoefs && prepSvc.gradeCoefs.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Степень очистки</Label>
+                        <Select value={prepGradeId} onValueChange={setPrepGradeId}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {prepSvc.gradeCoefs.map(g => (
+                              <SelectItem key={g.id} value={g.id}>{g.label} (×{g.coef})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Width coef selector */}
+                    {prepSvc?.widthCoefs && prepSvc.widthCoefs.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-1">
+                          Ширина элементов
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs max-w-xs">
+                                Коэф. по ширине узких элементов (балки, трубы, профили). Для больших плоских поверхностей — «более 250 мм».
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </Label>
+                        <Select value={prepWidthId} onValueChange={setPrepWidthId}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {ELEMENT_WIDTH_COEFS.map(w => (
+                              <SelectItem key={w.id} value={w.id}>{w.label} (×{w.coef})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
             {currentService.requiresGeometry ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="space-y-2">
@@ -644,6 +782,14 @@ export function CalculatorForm() {
                 <div className="flex justify-between items-baseline pb-2">
                   <span className="text-muted-foreground">Тип конструкции</span>
                   <span className="font-medium">{result.fireproofingStructureLabel}</span>
+                </div>
+              )}
+
+              {/* Surface prep cost line */}
+              {result.surfacePrepCost > 0 && result.prepServiceLabel && (
+                <div className="flex justify-between items-baseline pb-2">
+                  <span className="text-muted-foreground">Подготовка поверхности</span>
+                  <span className="font-mono font-semibold">{result.surfacePrepCost.toLocaleString()} ₽</span>
                 </div>
               )}
 

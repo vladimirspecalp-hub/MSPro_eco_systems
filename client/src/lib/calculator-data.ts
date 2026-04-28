@@ -67,6 +67,126 @@ export const COATING_TIER_META: Record<TierId, { label: string; description: str
     premium:  { label: "Премиум",  description: "Максимальная защита" },
 };
 
+// ─── Подготовка поверхности (блок P0.2, данные из АльпПРАЙС 2026-04-28) ───
+
+export interface SurfacePrepMaterial {
+    id: string;
+    label: string;
+    pricePerSqm: number;
+}
+
+export interface SurfacePrepGradeCoef {
+    id: string;
+    label: string;
+    coef: number;
+}
+
+export interface SurfacePrepWidthCoef {
+    id: string;
+    label: string;
+    coef: number;
+}
+
+// Коэфы по ширине элементов (АльпПРАЙС: листы «Пескоструйная», «Очистка металла»)
+export const ELEMENT_WIDTH_COEFS: SurfacePrepWidthCoef[] = [
+    { id: "w50",  label: "до 50 мм",     coef: 2.00 },
+    { id: "w80",  label: "50–80 мм",     coef: 1.70 },
+    { id: "w120", label: "81–120 мм",    coef: 1.50 },
+    { id: "w180", label: "121–180 мм",   coef: 1.30 },
+    { id: "w250", label: "181–250 мм",   coef: 1.20 },
+    { id: "w999", label: "более 250 мм", coef: 1.00 },
+];
+
+export interface SurfacePrepService {
+    id: string;
+    label: string;
+    description: string;
+    materials: SurfacePrepMaterial[];
+    gradeCoefs?: SurfacePrepGradeCoef[];  // Sa (пескоструй) или St (механика)
+    widthCoefs?: SurfacePrepWidthCoef[];  // ширина элементов конструкции
+}
+
+export const SURFACE_PREP_SERVICES: SurfacePrepService[] = [
+    {
+        id: "sandblast",
+        label: "Пескоструйная очистка",
+        description: "Абразивно-струйная, Sa 1–3 (ISO 8501). Оборудование заказчика.",
+        materials: [
+            { id: "metal",    label: "Металл",  pricePerSqm: 410 },
+            { id: "concrete", label: "Бетон",   pricePerSqm: 430 },
+            { id: "brick",    label: "Кирпич",  pricePerSqm: 380 },
+        ],
+        gradeCoefs: [
+            { id: "sweep", label: "Свипинг (Sa<1)", coef: 0.70 },
+            { id: "sa1",   label: "Sa 1.0",          coef: 1.00 },
+            { id: "sa2",   label: "Sa 2.0",          coef: 1.23 },
+            { id: "sa25",  label: "Sa 2.5",          coef: 1.56 },
+            { id: "sa3",   label: "Sa 3.0",          coef: 2.33 },
+        ],
+        widthCoefs: ELEMENT_WIDTH_COEFS,
+    },
+    {
+        id: "mechanical",
+        label: "Механическая очистка металла",
+        description: "От ржавчины и старой краски (УШМ, щётка, шабер, кислота). St 2–3 (ISO 8501).",
+        materials: [
+            { id: "wire_brush",  label: "Проволочная щётка",                  pricePerSqm: 230 },
+            { id: "grinder",     label: "УШМ (болгарка)",                      pricePerSqm: 250 },
+            { id: "scraper",     label: "Шабер (труднодоступные места)",       pricePerSqm: 580 },
+            { id: "matte",       label: "Матирование (наждачная бумага)",      pricePerSqm: 140 },
+            { id: "acid",        label: "Кислотная промывка",                  pricePerSqm: 480 },
+            { id: "chem_paste",  label: "Химсмывка (специальная паста)",       pricePerSqm: 620 },
+        ],
+        gradeCoefs: [
+            { id: "st2", label: "St 2 (тщательная)",      coef: 1.0 },
+            { id: "st3", label: "St 3 (очень тщательная)", coef: 1.3 },
+        ],
+        widthCoefs: ELEMENT_WIDTH_COEFS,
+    },
+    {
+        id: "hydroblast",
+        label: "Гидроструйная очистка (АВД)",
+        description: "Высокое давление ≥500 бар. Без абразива. Металл, бетон, фасады.",
+        materials: [
+            { id: "metal",   label: "Металлоконструкции", pricePerSqm: 175 },
+        ],
+        widthCoefs: ELEMENT_WIDTH_COEFS,
+    },
+    {
+        id: "facade_cleaning",
+        label: "Очистка фасадов",
+        description: "От высолов, копоти, потёков, биопоражений.",
+        materials: [
+            { id: "efflorescence", label: "Высолы",                      pricePerSqm: 660 },
+            { id: "mortar",        label: "Раствор / цементное молочко", pricePerSqm: 900 },
+            { id: "soot",          label: "Копоть и гарь",               pricePerSqm: 1050 },
+            { id: "paint_drips",   label: "Потёки наливных полов",       pricePerSqm: 840 },
+            { id: "sealant_drips", label: "Потёки акрилового герметика", pricePerSqm: 1150 },
+        ],
+    },
+    {
+        id: "dedusting",
+        label: "Обеспыливание (клининг)",
+        description: "Очистка поверхностей перед окраской.",
+        materials: [
+            { id: "air_blow", label: "Воздушным потоком (компрессор)", pricePerSqm: 79 },
+            { id: "vacuum",   label: "Пылесосом",                      pricePerSqm: 130 },
+            { id: "wet_mop",  label: "Влажный способ (швабра)",        pricePerSqm: 150 },
+            { id: "hydro",    label: "Гидроструйная (пол/поверхность)", pricePerSqm: 73 },
+        ],
+    },
+    {
+        id: "grinding",
+        label: "Шлифование поверхности",
+        description: "Механическое шлифование (УШМ, лента, диск). Расценки уточняются у инженера.",
+        materials: [
+            // Лист «Шлифование поверхности» в АльпПРАЙС не заполнен (по состоянию 01.04.2026)
+            // Расценки ожидают заполнения от Board. Отображается как «уточняется».
+            { id: "grinder_disc", label: "УШМ / шлифовальный диск", pricePerSqm: 0 },
+        ],
+    },
+];
+
 export const CALCULATOR_DATA = {
     regions: [
         // ЦЕНТРАЛЬНЫЙ ФО
