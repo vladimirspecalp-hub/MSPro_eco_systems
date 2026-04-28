@@ -40,7 +40,11 @@ SCRIPT_DIR = Path(__file__).parent
 REPO_DIR = SCRIPT_DIR.parent
 
 # Credentials — из env (cron-env-файл загружается runner-ом)
-YA_TOKEN = os.environ.get("YA_OAUTH_TOKEN") or os.environ.get("YA_OAUTH", "")
+YA_TOKEN = (
+    os.environ.get("YA_OAUTH_TOKEN")
+    or os.environ.get("YA_OAUTH")
+    or os.environ.get("YM_TOKEN", "")
+)
 YA_USER = os.environ.get("YA_WEBMASTER_USER", "239393595")
 YA_HOST = os.environ.get("YA_WEBMASTER_HOST", "https:mspro-ltd.ru:443")
 YA_COUNTER = os.environ.get("YA_METRIKA_COUNTER", "72249244")
