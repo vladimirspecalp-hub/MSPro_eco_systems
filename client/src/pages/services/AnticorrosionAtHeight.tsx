@@ -66,9 +66,31 @@ export default function AnticorrosionAtHeight() {
       }))
     });
 
+    const artId = "article-page-schema";
+    let artScript = document.getElementById(artId);
+    if (!artScript) {
+      artScript = document.createElement("script");
+      artScript.id = artId;
+      artScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(artScript);
+    }
+    artScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "Антикоррозионная защита металлоконструкций на высоте (АКЗ)",
+      "description": "Обновляем и наносим защитные покрытия на высоте для продления ресурса конструкций. Профильные объекты: ЛЭП, АМС/вышки, дымовые трубы, промэстакады и площадки.",
+      "url": "https://mspro-ltd.ru/services/anticorrosion-at-height",
+      "image": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg",
+      "author": { "@type": "Organization", "name": "MSPRO" },
+      "publisher": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru", "logo": { "@type": "ImageObject", "url": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg" } },
+      "datePublished": "2024-01-01",
+      "dateModified": new Date().toISOString().split("T")[0]
+    });
+
     return () => {
       document.getElementById(svcId)?.remove();
       document.getElementById(faqId)?.remove();
+      document.getElementById(artId)?.remove();
     };
   }, []);
 

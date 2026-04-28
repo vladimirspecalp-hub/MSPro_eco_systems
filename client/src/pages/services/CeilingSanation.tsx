@@ -67,9 +67,31 @@ export default function CeilingSanation() {
             }))
         });
 
+        const artId = "article-page-schema";
+        let artScript = document.getElementById(artId);
+        if (!artScript) {
+            artScript = document.createElement("script");
+            artScript.id = artId;
+            artScript.setAttribute("type", "application/ld+json");
+            document.head.appendChild(artScript);
+        }
+        artScript.textContent = JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Обеспыливание и покраска потолков в производственных цехах",
+            "description": "Профессиональная санация потолочных конструкций, ферм и кабельных трасс без остановки производства. Работаем на высоте от 5 до 50 метров.",
+            "url": "https://mspro-ltd.ru/services/ceiling-sanation",
+            "image": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg",
+            "author": { "@type": "Organization", "name": "MSPRO" },
+            "publisher": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru", "logo": { "@type": "ImageObject", "url": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg" } },
+            "datePublished": "2024-01-01",
+            "dateModified": new Date().toISOString().split("T")[0]
+        });
+
         return () => {
             document.getElementById(svcId)?.remove();
             document.getElementById(faqId)?.remove();
+            document.getElementById(artId)?.remove();
         };
     }, []);
 

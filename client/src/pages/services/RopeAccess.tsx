@@ -76,9 +76,31 @@ export default function RopeAccess() {
       }))
     });
 
+    const artId = "article-page-schema";
+    let artScript = document.getElementById(artId);
+    if (!artScript) {
+      artScript = document.createElement("script");
+      artScript.id = artId;
+      artScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(artScript);
+    }
+    artScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "Высотные работы промышленными альпинистами (промальп) на промобъектах",
+      "description": "Выполняем высотные работы там, где техника не подходит или экономически нецелесообразна. Специализация MSPRO — нанесение огнезащиты и антикоррозионной защиты металлоконструкций на высоте.",
+      "url": "https://mspro-ltd.ru/services/rope-access",
+      "image": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg",
+      "author": { "@type": "Organization", "name": "MSPRO" },
+      "publisher": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru", "logo": { "@type": "ImageObject", "url": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg" } },
+      "datePublished": "2024-01-01",
+      "dateModified": new Date().toISOString().split("T")[0]
+    });
+
     return () => {
       document.getElementById(svcId)?.remove();
       document.getElementById(faqId)?.remove();
+      document.getElementById(artId)?.remove();
     };
   }, []);
 

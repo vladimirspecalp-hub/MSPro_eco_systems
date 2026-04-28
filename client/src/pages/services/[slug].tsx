@@ -17,10 +17,10 @@ export default function ServicePage() {
   useEffect(() => {
     async function loadData() {
       if (!params?.slug) return;
-      
+
       setLoading(true);
       setError(false);
-      
+
       try {
         const data = await findOrGenerateSEOEntry(params.slug);
         setPageData(data);
@@ -33,9 +33,75 @@ export default function ServicePage() {
         setLoading(false);
       }
     }
-    
+
     loadData();
   }, [params?.slug]);
+
+  useEffect(() => {
+    if (!pageData || !params?.slug) return;
+
+    const url = `https://mspro-ltd.ru/services/${params.slug}`;
+    const today = new Date().toISOString().split("T")[0];
+    const image = "https://mspro-ltd.ru/site-industrial-theme-v5.jpg";
+
+    const injectScript = (id: string, data: object) => {
+      let el = document.getElementById(id);
+      if (!el) {
+        el = document.createElement("script");
+        el.id = id;
+        el.setAttribute("type", "application/ld+json");
+        document.head.appendChild(el);
+      }
+      el.textContent = JSON.stringify(data);
+    };
+
+    injectScript("service-page-schema", {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": pageData.title,
+      "description": pageData.description,
+      "url": url,
+      "provider": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru" },
+      "areaServed": { "@type": "Country", "name": "Россия" },
+      "serviceType": pageData.title,
+    });
+
+    injectScript("article-page-schema", {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": pageData.title,
+      "description": pageData.description,
+      "url": url,
+      "image": image,
+      "author": { "@type": "Organization", "name": "MSPRO" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "MSPRO",
+        "url": "https://mspro-ltd.ru",
+        "logo": { "@type": "ImageObject", "url": image },
+      },
+      "datePublished": "2024-01-01",
+      "dateModified": today,
+    });
+
+    if (pageData.faq && pageData.faq.length > 0) {
+      injectScript("service-faq-schema", {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": pageData.faq.map((item) => ({
+          "@type": "Question",
+          "name": item.question,
+          "acceptedAnswer": { "@type": "Answer", "text": item.answer },
+        })),
+      });
+    }
+
+    return () => {
+      document.getElementById("service-page-schema")?.remove();
+      document.getElementById("article-page-schema")?.remove();
+      document.getElementById("service-faq-schema")?.remove();
+    };
+  }, [pageData, params?.slug]);
 
   if (loading) {
     return (
