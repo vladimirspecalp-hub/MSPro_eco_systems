@@ -38,6 +38,48 @@ const objects = [
 export default function RopeAccess() {
   useEffect(() => {
     document.title = "Высотные работы промышленными альпинистами для промобъектов | MSPRO";
+
+    const svcId = "service-page-schema";
+    let svcScript = document.getElementById(svcId);
+    if (!svcScript) {
+      svcScript = document.createElement("script");
+      svcScript.id = svcId;
+      svcScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(svcScript);
+    }
+    svcScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "Высотные работы промышленными альпинистами (промальп) на промобъектах",
+      "description": "Выполняем высотные работы там, где техника не подходит или экономически нецелесообразна. Специализация MSPRO — нанесение огнезащиты и антикоррозионной защиты металлоконструкций на высоте.",
+      "url": "https://mspro-ltd.ru/services/rope-access",
+      "provider": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru" },
+      "areaServed": { "@type": "Country", "name": "Россия" },
+      "serviceType": "Промышленный альпинизм"
+    });
+
+    const faqId = "service-faq-schema";
+    let faqScript = document.getElementById(faqId);
+    if (!faqScript) {
+      faqScript = document.createElement("script");
+      faqScript.id = faqId;
+      faqScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(faqScript);
+    }
+    faqScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": FAQ_DEFAULT.map(item => ({
+        "@type": "Question",
+        "name": item.question,
+        "acceptedAnswer": { "@type": "Answer", "text": item.answer }
+      }))
+    });
+
+    return () => {
+      document.getElementById(svcId)?.remove();
+      document.getElementById(faqId)?.remove();
+    };
   }, []);
 
   return (

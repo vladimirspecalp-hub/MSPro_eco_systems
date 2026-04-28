@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -6,7 +7,72 @@ import {
     Clock, Wrench, HardHat, Sparkles, Wind, Droplets, PaintBucket
 } from "lucide-react";
 
+const ceilingSanationFaq = [
+    {
+        question: "Надо ли останавливать производство?",
+        answer: "Нет. Мы работаем в ночные смены, выходные дни или локально ограждаем зоны работ, накрывая оборудование защитной плёнкой. Альпинисты мобильны и не требуют установки громоздких лесов."
+    },
+    {
+        question: "Как вы моете над работающими станками?",
+        answer: "Используем технологию \"альпинистского зонта\" (сбор воды и грязи в подвесные лотки) или применяем только сухую вакуумную чистку."
+    },
+    {
+        question: "Что делать с огромными отложениями пыли (5-10 см)?",
+        answer: "Это уже не пыль, а спрессованная грязь. Решение: комбинированный метод — сначала механическая зачистка (шпатели/скребки), затем финальное обеспыливание."
+    },
+    {
+        question: "Какие гарантии вы предоставляете?",
+        answer: "На покраску органосиликатной краской — гарантия до 10 лет. На обеспыливание — акт выполненных работ с фотофиксацией до/после."
+    }
+];
+
 export default function CeilingSanation() {
+    useEffect(() => {
+        document.title = "Обеспыливание и покраска потолков в цехах (промальп) | MSPRO";
+
+        const svcId = "service-page-schema";
+        let svcScript = document.getElementById(svcId);
+        if (!svcScript) {
+            svcScript = document.createElement("script");
+            svcScript.id = svcId;
+            svcScript.setAttribute("type", "application/ld+json");
+            document.head.appendChild(svcScript);
+        }
+        svcScript.textContent = JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "name": "Обеспыливание и покраска потолков в производственных цехах",
+            "description": "Профессиональная санация потолочных конструкций, ферм и кабельных трасс без остановки производства. Работаем на высоте от 5 до 50 метров.",
+            "url": "https://mspro-ltd.ru/services/ceiling-sanation",
+            "provider": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru" },
+            "areaServed": { "@type": "Country", "name": "Россия" },
+            "serviceType": "Санация потолков в производственных цехах"
+        });
+
+        const faqId = "service-faq-schema";
+        let faqScript = document.getElementById(faqId);
+        if (!faqScript) {
+            faqScript = document.createElement("script");
+            faqScript.id = faqId;
+            faqScript.setAttribute("type", "application/ld+json");
+            document.head.appendChild(faqScript);
+        }
+        faqScript.textContent = JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": ceilingSanationFaq.map(item => ({
+                "@type": "Question",
+                "name": item.question,
+                "acceptedAnswer": { "@type": "Answer", "text": item.answer }
+            }))
+        });
+
+        return () => {
+            document.getElementById(svcId)?.remove();
+            document.getElementById(faqId)?.remove();
+        };
+    }, []);
+
     const painPoints = [
         {
             icon: AlertTriangle,
@@ -61,24 +127,7 @@ export default function CeilingSanation() {
         }
     ];
 
-    const faq = [
-        {
-            question: "Надо ли останавливать производство?",
-            answer: "Нет. Мы работаем в ночные смены, выходные дни или локально ограждаем зоны работ, накрывая оборудование защитной плёнкой. Альпинисты мобильны и не требуют установки громоздких лесов."
-        },
-        {
-            question: "Как вы моете над работающими станками?",
-            answer: "Используем технологию \"альпинистского зонта\" (сбор воды и грязи в подвесные лотки) или применяем только сухую вакуумную чистку."
-        },
-        {
-            question: "Что делать с огромными отложениями пыли (5-10 см)?",
-            answer: "Это уже не пыль, а спрессованная грязь. Решение: комбинированный метод — сначала механическая зачистка (шпатели/скребки), затем финальное обеспыливание."
-        },
-        {
-            question: "Какие гарантии вы предоставляете?",
-            answer: "На покраску органосиликатной краской — гарантия до 10 лет. На обеспыливание — акт выполненных работ с фотофиксацией до/после."
-        }
-    ];
+    const faq = ceilingSanationFaq;
 
     return (
         <div className="flex flex-col">

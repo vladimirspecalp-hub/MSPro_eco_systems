@@ -38,6 +38,48 @@ const objects = [
 export default function Demolition() {
     useEffect(() => {
         document.title = "Демонтаж на высоте промышленными альпинистами | MSPRO";
+
+        const svcId = "service-page-schema";
+        let svcScript = document.getElementById(svcId);
+        if (!svcScript) {
+            svcScript = document.createElement("script");
+            svcScript.id = svcId;
+            svcScript.setAttribute("type", "application/ld+json");
+            document.head.appendChild(svcScript);
+        }
+        svcScript.textContent = JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "name": "Демонтаж на высоте (промальп)",
+            "description": "Безопасный разбор и снос конструкций на высоте силами промышленных альпинистов. Работаем там, где нельзя использовать спецтехнику из-за плотной застройки или риска повреждения оборудования.",
+            "url": "https://mspro-ltd.ru/services/demolition",
+            "provider": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru" },
+            "areaServed": { "@type": "Country", "name": "Россия" },
+            "serviceType": "Демонтаж на высоте"
+        });
+
+        const faqId = "service-faq-schema";
+        let faqScript = document.getElementById(faqId);
+        if (!faqScript) {
+            faqScript = document.createElement("script");
+            faqScript.id = faqId;
+            faqScript.setAttribute("type", "application/ld+json");
+            document.head.appendChild(faqScript);
+        }
+        faqScript.textContent = JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": FAQ_DEFAULT.map(item => ({
+                "@type": "Question",
+                "name": item.question,
+                "acceptedAnswer": { "@type": "Answer", "text": item.answer }
+            }))
+        });
+
+        return () => {
+            document.getElementById(svcId)?.remove();
+            document.getElementById(faqId)?.remove();
+        };
     }, []);
 
     return (

@@ -18,6 +18,48 @@ const faq = FAQ_BY_INTENT.fireproof || [];
 export default function FireproofingAtHeight() {
   useEffect(() => {
     document.title = "Огнезащита металлоконструкций на высоте (промальп) | MSPRO";
+
+    const svcId = "service-page-schema";
+    let svcScript = document.getElementById(svcId);
+    if (!svcScript) {
+      svcScript = document.createElement("script");
+      svcScript.id = svcId;
+      svcScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(svcScript);
+    }
+    svcScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "Огнезащита металлоконструкций на высоте (промышленный альпинизм)",
+      "description": "Наносим огнезащитные составы на высоте там, где требуется доступ без тяжелой техники: ЛЭП, АМС/вышки, трубы, фермы и площадки.",
+      "url": "https://mspro-ltd.ru/services/fireproofing-at-height",
+      "provider": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru" },
+      "areaServed": { "@type": "Country", "name": "Россия" },
+      "serviceType": "Огнезащита металлоконструкций"
+    });
+
+    const faqId = "service-faq-schema";
+    let faqScript = document.getElementById(faqId);
+    if (!faqScript) {
+      faqScript = document.createElement("script");
+      faqScript.id = faqId;
+      faqScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(faqScript);
+    }
+    faqScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faq.map(item => ({
+        "@type": "Question",
+        "name": item.question,
+        "acceptedAnswer": { "@type": "Answer", "text": item.answer }
+      }))
+    });
+
+    return () => {
+      document.getElementById(svcId)?.remove();
+      document.getElementById(faqId)?.remove();
+    };
   }, []);
 
   return (

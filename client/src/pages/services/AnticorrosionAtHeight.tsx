@@ -28,6 +28,48 @@ const faq = FAQ_BY_INTENT.anticorr || [];
 export default function AnticorrosionAtHeight() {
   useEffect(() => {
     document.title = "Антикоррозионная защита на высоте (АКЗ, промальп) | MSPRO";
+
+    const svcId = "service-page-schema";
+    let svcScript = document.getElementById(svcId);
+    if (!svcScript) {
+      svcScript = document.createElement("script");
+      svcScript.id = svcId;
+      svcScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(svcScript);
+    }
+    svcScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "Антикоррозионная защита металлоконструкций на высоте (АКЗ)",
+      "description": "Обновляем и наносим защитные покрытия на высоте для продления ресурса конструкций. Профильные объекты: ЛЭП, АМС/вышки, дымовые трубы, промэстакады и площадки.",
+      "url": "https://mspro-ltd.ru/services/anticorrosion-at-height",
+      "provider": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru" },
+      "areaServed": { "@type": "Country", "name": "Россия" },
+      "serviceType": "Антикоррозионная защита металлоконструкций"
+    });
+
+    const faqId = "service-faq-schema";
+    let faqScript = document.getElementById(faqId);
+    if (!faqScript) {
+      faqScript = document.createElement("script");
+      faqScript.id = faqId;
+      faqScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(faqScript);
+    }
+    faqScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faq.map(item => ({
+        "@type": "Question",
+        "name": item.question,
+        "acceptedAnswer": { "@type": "Answer", "text": item.answer }
+      }))
+    });
+
+    return () => {
+      document.getElementById(svcId)?.remove();
+      document.getElementById(faqId)?.remove();
+    };
   }, []);
 
   return (
