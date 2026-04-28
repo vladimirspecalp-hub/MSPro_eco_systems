@@ -4,7 +4,6 @@ import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
-import { nanoid } from "nanoid";
 import { generateSSRMeta } from "./services/ssr-meta";
 
 const viteLogger = createLogger();
@@ -57,7 +56,7 @@ export async function setupVite(app: Express, server: Server) {
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`,
+        `src="/src/main.tsx?v=${crypto.randomUUID()}"`,
       );
 
       // SSR: inject JSON-LD, <title>, <meta> tags
