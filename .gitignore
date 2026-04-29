@@ -24,6 +24,9 @@ _logs/
 # Analytics data (full archive — только на beget, не в git)
 _data/analytics/
 
+# Leads data — personal data, never in git
+data/leads/
+
 # Backups
 backups/
 backup_*/
