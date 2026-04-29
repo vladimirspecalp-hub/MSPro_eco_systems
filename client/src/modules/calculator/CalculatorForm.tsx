@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, ChevronsUpDown, Info } from "lucide-react";
+import { Check, ChevronsUpDown, Info, Factory, Shield, Layers, Flame, Mountain, Building2 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
@@ -70,14 +70,62 @@ function useCounter(target: number, duration = 350): number {
   return displayed;
 }
 
-const SERVICE_EMOJI: Record<string, string> = {
-  chimney_painting: "🏭",
-  anticorrosion:    "⚙️",
-  mspro_quad:       "🔧",
-  fireproofing:     "🔥",
-  rope_access:      "🧗",
-  ceiling_sanation: "🏗️",
+const SERVICE_ICON: Record<string, JSX.Element> = {
+  chimney_painting: <Factory className="h-4 w-4" />,
+  anticorrosion:    <Shield className="h-4 w-4" />,
+  mspro_quad:       <Layers className="h-4 w-4" />,
+  fireproofing:     <Flame className="h-4 w-4" />,
+  rope_access:      <Mountain className="h-4 w-4" />,
+  ceiling_sanation: <Building2 className="h-4 w-4" />,
 };
+
+// Floating label input (Stripe-style) for numeric fields
+function FloatingInput({
+  id, label, value, onChange, step, min, onKeyDown, onPaste,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  step?: string;
+  min?: string;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onPaste?: React.ClipboardEventHandler<HTMLInputElement>;
+}) {
+  const floated = value !== "";
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type="number"
+        step={step}
+        min={min}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onPaste={onPaste}
+        placeholder=" "
+        className={cn(
+          "peer block w-full rounded-md border border-input bg-background",
+          "px-3 pt-6 pb-2 text-sm transition-colors",
+          "focus:outline-none focus:ring-1 focus:ring-[#820101] focus:border-[#820101]",
+          "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        )}
+      />
+      <label
+        htmlFor={id}
+        className={cn(
+          "absolute left-3 pointer-events-none transition-all duration-150 text-muted-foreground",
+          floated
+            ? "top-1.5 text-[11px] font-medium text-[#820101]/70"
+            : "top-1/2 -translate-y-1/2 text-sm peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-[11px] peer-focus:font-medium peer-focus:text-[#820101]/70"
+        )}
+      >
+        {label}
+      </label>
+    </div>
+  );
+}
 
 export function CalculatorForm() {
   const [, setLocation] = useLocation();
@@ -88,10 +136,10 @@ export function CalculatorForm() {
   const [selectedTier, setSelectedTier] = useState<TierId>("standard");
   const [openRegion, setOpenRegion] = useState(false);
 
-  // Controlled inputs for real-time calculation
-  const [height, setHeight] = useState("");
-  const [diameter, setDiameter] = useState("");
-  const [area, setArea] = useState("");
+  // Controlled inputs for real-time calculation (defaults → Hero Number visible immediately)
+  const [height, setHeight] = useState("30");
+  const [diameter, setDiameter] = useState("2.5");
+  const [area, setArea] = useState("1000");
 
   const [chimneyMaterial, setChimneyMaterial] = useState<ChimneyMaterial>("metal");
   const [surfacePrep, setSurfacePrep] = useState<SurfacePrep>("manual");
@@ -294,7 +342,7 @@ export function CalculatorForm() {
                       : "border-border hover:border-[#820101]/50 hover:bg-[#820101]/5"
                   )}
                 >
-                  <span aria-hidden="true">{SERVICE_EMOJI[s.id] || "🔧"}</span>
+                  <span aria-hidden="true" className="flex-shrink-0">{SERVICE_ICON[s.id]}</span>
                   <span>{s.label}</span>
                 </button>
               ))}
@@ -304,26 +352,26 @@ export function CalculatorForm() {
           {/* 2. Geometry / area inputs */}
           {currentService.requiresGeometry ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg border">
-              <div className="space-y-2">
-                <Label htmlFor="height">Высота трубы (м) *</Label>
-                <Input
-                  id="height" type="number" step="0.1" min="0.1" placeholder="30"
-                  value={height}
-                  onChange={e => { handleFirstInteraction(); setHeight(e.target.value); }}
-                  onKeyDown={handleNumericKeyDown}
-                  onPaste={handleNumericPaste}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="diameter">Диаметр трубы (м) *</Label>
-                <Input
-                  id="diameter" type="number" step="0.1" min="0.1" placeholder="2.5"
-                  value={diameter}
-                  onChange={e => { handleFirstInteraction(); setDiameter(e.target.value); }}
-                  onKeyDown={handleNumericKeyDown}
-                  onPaste={handleNumericPaste}
-                />
-              </div>
+              <FloatingInput
+                id="height"
+                label="Высота трубы, м *"
+                value={height}
+                onChange={e => { handleFirstInteraction(); setHeight(e.target.value); }}
+                step="0.1"
+                min="0.1"
+                onKeyDown={handleNumericKeyDown}
+                onPaste={handleNumericPaste}
+              />
+              <FloatingInput
+                id="diameter"
+                label="Диаметр трубы, м *"
+                value={diameter}
+                onChange={e => { handleFirstInteraction(); setDiameter(e.target.value); }}
+                step="0.1"
+                min="0.1"
+                onKeyDown={handleNumericKeyDown}
+                onPaste={handleNumericPaste}
+              />
               {calcResult && (
                 <p className="col-span-full text-xs text-muted-foreground px-1">
                   Площадь боковой поверхности: {calcResult.surfaceArea} м²
@@ -331,12 +379,14 @@ export function CalculatorForm() {
               )}
             </div>
           ) : (
-            <div className="space-y-2 p-4 bg-muted/20 rounded-lg border">
-              <Label htmlFor="area">Площадь поверхности (м²) *</Label>
-              <Input
-                id="area" type="number" step="1" min="1" placeholder="1000"
+            <div className="p-4 bg-muted/20 rounded-lg border">
+              <FloatingInput
+                id="area"
+                label="Площадь поверхности, м² *"
                 value={area}
                 onChange={e => { handleFirstInteraction(); setArea(e.target.value); }}
+                step="1"
+                min="1"
                 onKeyDown={handleNumericKeyDown}
                 onPaste={handleNumericPaste}
               />
@@ -425,9 +475,12 @@ export function CalculatorForm() {
                   className="rounded-md px-3 py-2"
                   style={{ background: 'rgba(0,0,0,0.35)', borderLeft: '2px solid rgba(130,1,1,0.5)' }}
                 >
-                  <p className="text-xs text-gray-500">
-                    ⚙️ <span className="font-medium text-gray-400">Смета предварительная.</span>{' '}
-                    Точная стоимость уточняется инженером при осмотре объекта.
+                  <p className="text-xs text-gray-500 flex items-start gap-1.5">
+                    <Info className="h-3.5 w-3.5 text-gray-500 mt-0.5 shrink-0" />
+                    <span>
+                      <span className="font-medium text-gray-400">Смета предварительная.</span>{' '}
+                      Точная стоимость уточняется инженером при осмотре объекта.
+                    </span>
                   </p>
                 </div>
               </div>
@@ -631,8 +684,9 @@ export function CalculatorForm() {
                       className="p-3 rounded-lg text-xs"
                       style={{ background: 'rgba(130,1,1,0.07)', border: '1px solid rgba(130,1,1,0.2)' }}
                     >
-                      <p className="font-semibold mb-1" style={{ color: '#B14141' }}>
-                        ℹ️ Как учитываются факторы
+                      <p className="font-semibold mb-1 flex items-center gap-1.5" style={{ color: '#B14141' }}>
+                        <Info className="h-3.5 w-3.5 shrink-0" />
+                        Как учитываются факторы
                       </p>
                       <p className="text-muted-foreground leading-relaxed">
                         Каждый фактор перемножает стоимость работ по методике MSPRO.
