@@ -27,6 +27,21 @@ function pushToDataLayer(event: AnalyticsEvent): void {
 }
 
 /**
+ * Send event directly to GA4 via gtag()
+ * Required when GA4 is loaded via gtag/js (without GTM).
+ * dataLayer.push() is GTM-only; gtag('event') is the direct GA4 API.
+ * @param eventType - GA4 event name
+ * @param meta - Event parameters (NO PII!)
+ */
+function callGtag(eventType: string, meta?: Record<string, unknown>): void {
+  if (typeof window === 'undefined') return;
+  const gtag = (window as any).gtag;
+  if (typeof gtag !== 'function') return;
+
+  gtag('event', eventType, meta ?? {});
+}
+
+/**
  * Log event to console (debug mode)
  * @param event - Analytics event object
  */
@@ -125,6 +140,7 @@ export function track(
   };
 
   pushToDataLayer(event);
+  callGtag(eventType as string, meta);
 
   if (config.debug) {
     debugLog(event);
