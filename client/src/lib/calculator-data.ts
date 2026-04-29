@@ -367,6 +367,42 @@ export const CALCULATOR_DATA = {
     ] as Hazard[]
 };
 
+// ─── Геометрические субформы (блок P1.1) ────────────────────────────────────
+
+export type GeometryTypeId = "tank_vertical" | "tank_horizontal" | "plane" | "beam" | "grid" | "manual";
+
+export interface BeamSection {
+    id: string;
+    label: string;
+    perimeterM: number; // метры, периметр сечения для окраски ≈ 2*(b+h)
+}
+
+// Стандартные сечения (ГОСТ 26020-83, серия Б), P ≈ 2*(b+h)
+export const BEAM_SECTIONS: BeamSection[] = [
+    { id: "b10",    label: "10Б1 · 100×100 мм",  perimeterM: 0.40 },
+    { id: "b16",    label: "16Б1 · 160×160 мм",  perimeterM: 0.64 },
+    { id: "b20",    label: "20Б1 · 200×200 мм",  perimeterM: 0.80 },
+    { id: "b25",    label: "25Б1 · 250×250 мм",  perimeterM: 1.00 },
+    { id: "b30",    label: "30Б1 · 300×300 мм",  perimeterM: 1.20 },
+    { id: "b40",    label: "40Б1 · 400×400 мм",  perimeterM: 1.60 },
+    { id: "custom", label: "Другое (ввести вручную)", perimeterM: 0 },
+];
+
+export interface GeometryFormDef {
+    id: GeometryTypeId;
+    label: string;
+    formulaHint: string;
+}
+
+export const GEOMETRY_FORMS: GeometryFormDef[] = [
+    { id: "tank_vertical",   label: "Резервуар вертикальный",   formulaHint: "π·D·H + π·D²/4" },
+    { id: "tank_horizontal", label: "Резервуар горизонтальный", formulaHint: "π·D·L + π·D²/2" },
+    { id: "plane",           label: "Плоскость",                formulaHint: "W·L" },
+    { id: "beam",            label: "Балка / двутавр",          formulaHint: "P·L" },
+    { id: "grid",            label: "Сетка / решётка",          formulaHint: "W·L × 1.3" },
+    { id: "manual",          label: "Ввести площадь вручную",   formulaHint: "" },
+];
+
 export const SERVICE_TYPES: ServiceType[] = [
     {
         id: "chimney_painting",

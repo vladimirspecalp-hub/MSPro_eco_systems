@@ -11,7 +11,7 @@ import { Check, ChevronsUpDown, Info, Factory, Shield, Layers, Flame, Mountain, 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trackCalcStart, trackCalcSubmit } from "@/modules/analytics";
 import { useLocation } from "wouter";
-import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS, AnticorrosionType, ANTICORROSION_TYPES, FireproofingStructureType, FIREPROOFING_STRUCTURE_TYPES, SURFACE_PREP_SERVICES, ELEMENT_WIDTH_COEFS } from "@/lib/calculator-data";
+import { CALCULATOR_DATA, SERVICE_TYPES, COATING_TIER_META, TierId, ChimneyMaterial, SurfacePrep, CHIMNEY_MATERIALS, SURFACE_PREP_OPTIONS, AnticorrosionType, ANTICORROSION_TYPES, FireproofingStructureType, FIREPROOFING_STRUCTURE_TYPES, SURFACE_PREP_SERVICES, ELEMENT_WIDTH_COEFS, GeometryTypeId, GEOMETRY_FORMS, BEAM_SECTIONS } from "@/lib/calculator-data";
 import { cn } from "@/lib/utils";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
@@ -42,6 +42,7 @@ interface CalculationResult {
   surfacePrepLabel?: string;
   anticorrosionTypeLabel?: string;
   fireproofingStructureLabel?: string;
+  geometryDescription?: string;
 }
 
 // Counter animation hook for Concept C hero number
@@ -150,6 +151,19 @@ export function CalculatorForm() {
   const [prepGradeId, setPrepGradeId] = useState<string>("sa25");
   const [prepWidthId, setPrepWidthId] = useState<string>("w999");
 
+  // P1.1: геометрические субформы для не-chimney услуг
+  const [geoType, setGeoType] = useState<GeometryTypeId>("manual");
+  const [tankD, setTankD] = useState("5");
+  const [tankH, setTankH] = useState("10");
+  const [tankL, setTankL] = useState("10");
+  const [planeW, setPlaneW] = useState("10");
+  const [planeL, setPlaneL] = useState("20");
+  const [beamL, setBeamL] = useState("6");
+  const [beamSectionId, setBeamSectionId] = useState("b20");
+  const [beamCustomP, setBeamCustomP] = useState("1.0");
+  const [gridW, setGridW] = useState("5");
+  const [gridL, setGridL] = useState("10");
+
   const hasTrackedStart = useRef(false);
 
   const currentService = useMemo(() =>
@@ -161,6 +175,10 @@ export function CalculatorForm() {
     if (currentService.coatingTiers.length === 0) return;
     const hasStandard = currentService.coatingTiers.some(t => t.tierId === "standard");
     setSelectedTier(hasStandard ? "standard" : currentService.coatingTiers[0].tierId);
+  }, [currentService.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!currentService.requiresGeometry) setGeoType("manual");
   }, [currentService.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFirstInteraction = () => {
@@ -188,12 +206,53 @@ export function CalculatorForm() {
   // Real-time calculation — replaces form submit
   const calcResult = useMemo<CalculationResult | null>(() => {
     let surfaceArea = 0;
+    let geometryDescription: string | undefined;
+
     if (currentService.requiresGeometry) {
       const h = parseFloat(height) || 0;
       const d = parseFloat(diameter) || 0;
       surfaceArea = Math.PI * d * h;
     } else {
-      surfaceArea = parseFloat(area) || 0;
+      const D = parseFloat(tankD) || 0;
+      const H = parseFloat(tankH) || 0;
+      const L_tank = parseFloat(tankL) || 0;
+      const W_plane = parseFloat(planeW) || 0;
+      const L_plane = parseFloat(planeL) || 0;
+      const L_beam = parseFloat(beamL) || 0;
+      const P_beam = beamSectionId === "custom"
+        ? (parseFloat(beamCustomP) || 0)
+        : (BEAM_SECTIONS.find(s => s.id === beamSectionId)?.perimeterM || 0);
+      const W_grid = parseFloat(gridW) || 0;
+      const L_grid = parseFloat(gridL) || 0;
+
+      switch (geoType) {
+        case "tank_vertical":
+          surfaceArea = Math.PI * D * H + Math.PI * (D / 2) ** 2;
+          geometryDescription = `Резервуар вертикальный: D=${tankD}м, H=${tankH}м`;
+          break;
+        case "tank_horizontal":
+          surfaceArea = Math.PI * D * L_tank + 2 * Math.PI * (D / 2) ** 2;
+          geometryDescription = `Резервуар горизонтальный: D=${tankD}м, L=${tankL}м`;
+          break;
+        case "plane":
+          surfaceArea = W_plane * L_plane;
+          geometryDescription = `Плоскость: ${planeW}×${planeL}м`;
+          break;
+        case "beam": {
+          surfaceArea = P_beam * L_beam;
+          const section = BEAM_SECTIONS.find(s => s.id === beamSectionId);
+          geometryDescription = `Балка ${beamSectionId === "custom" ? `P=${beamCustomP}м` : section?.label}, L=${beamL}м`;
+          break;
+        }
+        case "grid":
+          surfaceArea = W_grid * L_grid * 1.3;
+          geometryDescription = `Сетка/решётка: ${gridW}×${gridL}м (×1.3)`;
+          break;
+        case "manual":
+        default:
+          surfaceArea = parseFloat(area) || 0;
+          break;
+      }
     }
     if (surfaceArea <= 0) return null;
 
@@ -261,10 +320,12 @@ export function CalculatorForm() {
         ? SURFACE_PREP_OPTIONS[surfacePrep].label : undefined,
       anticorrosionTypeLabel: selectedService === "anticorrosion" ? ANTICORROSION_TYPES[anticorrosionType].label : undefined,
       fireproofingStructureLabel: selectedService === "fireproofing" ? FIREPROOFING_STRUCTURE_TYPES[fireproofingStructureType].label : undefined,
+      geometryDescription,
     };
   }, [selectedService, currentService, height, diameter, area, selectedRegion, selectedHazards, selectedTier,
       chimneyMaterial, surfacePrep, anticorrosionType, fireproofingStructureType,
-      prepServiceId, prepMaterialId, prepGradeId, prepWidthId]);
+      prepServiceId, prepMaterialId, prepGradeId, prepWidthId,
+      geoType, tankD, tankH, tankL, planeW, planeL, beamL, beamSectionId, beamCustomP, gridW, gridL]);
 
   // Counter animation for hero number
   const displayedCost = useCounter(calcResult?.estimatedCost ?? 0);
@@ -299,6 +360,7 @@ export function CalculatorForm() {
       `Услуга: ${calcResult.serviceType}`,
       `Регион: ${calcResult.region}`,
       `Площадь: ${calcResult.surfaceArea} м²`,
+      calcResult.geometryDescription ? `Геометрия: ${calcResult.geometryDescription}` : null,
       calcResult.height ? `Высота: ${calcResult.height} м` : null,
       calcResult.chimneyMaterialLabel ? `Материал трубы: ${calcResult.chimneyMaterialLabel}` : null,
       calcResult.surfacePrepLabel ? `Подготовка поверхности: ${calcResult.surfacePrepLabel}` : null,
@@ -379,17 +441,128 @@ export function CalculatorForm() {
               )}
             </div>
           ) : (
-            <div className="p-4 bg-muted/20 rounded-lg border">
-              <FloatingInput
-                id="area"
-                label="Площадь поверхности, м² *"
-                value={area}
-                onChange={e => { handleFirstInteraction(); setArea(e.target.value); }}
-                step="1"
-                min="1"
-                onKeyDown={handleNumericKeyDown}
-                onPaste={handleNumericPaste}
-              />
+            <div className="space-y-3 p-4 bg-muted/20 rounded-lg border">
+              {/* Geometry type selector */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Тип объекта</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {GEOMETRY_FORMS.map(form => (
+                    <button
+                      key={form.id}
+                      type="button"
+                      onClick={() => { handleFirstInteraction(); setGeoType(form.id); }}
+                      className={cn(
+                        "flex flex-col items-start px-3 py-2 rounded-lg border text-sm transition-all text-left",
+                        geoType === form.id
+                          ? "border-[#820101] bg-[#820101]/10 text-foreground"
+                          : "border-border hover:border-[#820101]/40 hover:bg-[#820101]/5"
+                      )}
+                    >
+                      <span className="font-medium leading-snug">{form.label}</span>
+                      {form.formulaHint && (
+                        <span className="text-xs text-muted-foreground mt-0.5 font-mono">{form.formulaHint}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Subform: Резервуар вертикальный */}
+              {geoType === "tank_vertical" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FloatingInput id="geo-tank-d" label="Диаметр D, м" value={tankD}
+                    onChange={e => { handleFirstInteraction(); setTankD(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                  <FloatingInput id="geo-tank-h" label="Высота H, м" value={tankH}
+                    onChange={e => { handleFirstInteraction(); setTankH(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                </div>
+              )}
+
+              {/* Subform: Резервуар горизонтальный */}
+              {geoType === "tank_horizontal" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FloatingInput id="geo-tankh-d" label="Диаметр D, м" value={tankD}
+                    onChange={e => { handleFirstInteraction(); setTankD(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                  <FloatingInput id="geo-tankh-l" label="Длина L, м" value={tankL}
+                    onChange={e => { handleFirstInteraction(); setTankL(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                </div>
+              )}
+
+              {/* Subform: Плоскость */}
+              {geoType === "plane" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FloatingInput id="geo-plane-w" label="Ширина W, м" value={planeW}
+                    onChange={e => { handleFirstInteraction(); setPlaneW(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                  <FloatingInput id="geo-plane-l" label="Длина L, м" value={planeL}
+                    onChange={e => { handleFirstInteraction(); setPlaneL(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                </div>
+              )}
+
+              {/* Subform: Балка / двутавр */}
+              {geoType === "beam" && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Сечение (ГОСТ 26020-83)</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {BEAM_SECTIONS.map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setBeamSectionId(s.id)}
+                          className={cn(
+                            "px-2.5 py-1.5 rounded border text-xs transition-all text-left",
+                            beamSectionId === s.id
+                              ? "border-[#820101] bg-[#820101]/10"
+                              : "border-border hover:border-[#820101]/40"
+                          )}
+                        >
+                          <span className="font-medium block">{s.label}</span>
+                          {s.perimeterM > 0 && <span className="text-muted-foreground">P={s.perimeterM}м</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {beamSectionId === "custom" && (
+                    <FloatingInput id="geo-beam-p" label="Периметр сечения P, м" value={beamCustomP}
+                      onChange={e => { handleFirstInteraction(); setBeamCustomP(e.target.value); }}
+                      step="0.01" min="0.01" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                  )}
+                  <FloatingInput id="geo-beam-l" label="Длина балки L, м" value={beamL}
+                    onChange={e => { handleFirstInteraction(); setBeamL(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                </div>
+              )}
+
+              {/* Subform: Сетка / решётка */}
+              {geoType === "grid" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FloatingInput id="geo-grid-w" label="Ширина W, м" value={gridW}
+                    onChange={e => { handleFirstInteraction(); setGridW(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                  <FloatingInput id="geo-grid-l" label="Длина L, м" value={gridL}
+                    onChange={e => { handleFirstInteraction(); setGridL(e.target.value); }}
+                    step="0.1" min="0.1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+                </div>
+              )}
+
+              {/* Subform: Ручной ввод */}
+              {geoType === "manual" && (
+                <FloatingInput id="area" label="Площадь поверхности, м² *" value={area}
+                  onChange={e => { handleFirstInteraction(); setArea(e.target.value); }}
+                  step="1" min="1" onKeyDown={handleNumericKeyDown} onPaste={handleNumericPaste} />
+              )}
+
+              {/* Computed area display */}
+              {geoType !== "manual" && calcResult && (
+                <p className="text-xs text-muted-foreground px-1">
+                  Расчётная площадь: <span className="font-medium text-foreground">{calcResult.surfaceArea} м²</span>
+                </p>
+              )}
             </div>
           )}
 
