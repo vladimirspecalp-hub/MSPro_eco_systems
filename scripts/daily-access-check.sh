@@ -6,23 +6,20 @@
 # Запуск: bash scripts/daily-access-check.sh
 # Cron:   30 8 * * 1-5  /path/to/mspro-site/scripts/daily-access-check.sh
 #
-# Credentials (задать в .env.access-check или переменными среды):
+# Credentials (задать в ~/.config/mspro/access-check.env или переменными среды):
 #   YM_TOKEN          — Yandex.Metrika OAuth-токен
-#                       Получить: https://oauth.yandex.ru/authorize?response_type=token&client_id=<APP_ID>
-#                       Ротация: каждые 90 дней, обновить вручную и перезаписать .env.access-check
 #   GA4_CLIENT_ID     — OAuth 2.0 Client ID из Google Cloud Console
 #   GA4_CLIENT_SECRET — OAuth 2.0 Client Secret
-#   GA4_REFRESH_TOKEN — Refresh token GA4 (получить через OAuth flow один раз)
-#                       Ротация: при отзыве приложения Google, повторить OAuth flow
+#   GA4_REFRESH_TOKEN — Refresh token GA4
 #   PAPERCLIP_API_KEY — JWT-ключ Paperclip агента (Сисадмин)
-#   PAPERCLIP_API_URL — https://api.paperclip.ing (или self-hosted URL)
+#   PAPERCLIP_API_URL — http://127.0.0.1:3100 (self-hosted)
 #   PAPERCLIP_COMPANY_ID — UUID компании в Paperclip
 #
 # .env.access-check лежит вне репо (НЕ коммитить!):
-#   Рекомендуемый путь: ~/.config/mspro/access-check.env
-#   Или: /etc/mspro/access-check.env (для cron на сервере)
+#   ~/.config/mspro/access-check.env
 #
 # Логи: logs/access-check-YYYY-MM-DD.log (создаются автоматически)
+# Зависимости: bash, curl, node (или python3 для GA4 JSON)
 # =============================================================================
 
 set -euo pipefail
@@ -36,22 +33,26 @@ LOG_DIR="$REPO_DIR/logs"
 DATE_TAG="$(date +%Y-%m-%d)"
 LOG_FILE="$LOG_DIR/access-check-$DATE_TAG.log"
 
-# Агент-Сисадмин
 SYSADMIN_AGENT_ID="eca71b89-b53e-4738-8f41-5b1be989fecf"
-
-# YM counter ID
 YM_COUNTER_ID="72249244"
-
-# GA4 property ID
 GA4_PROPERTY_ID="534148832"
 
+# Определяем JSON-парсер (node предпочтительнее для кросс-платформ)
+if command -v node >/dev/null 2>&1; then
+  JSON_PARSER="node"
+elif command -v python3 >/dev/null 2>&1; then
+  JSON_PARSER="python3"
+else
+  JSON_PARSER="none"
+fi
+
 # ---------------------------------------------------------------------------
-# Загрузка credentials из .env файла (если существует)
+# Загрузка credentials
 # ---------------------------------------------------------------------------
 ENV_FILE="${MSPRO_ENV_FILE:-$HOME/.config/mspro/access-check.env}"
 if [[ -f "$ENV_FILE" ]]; then
-  # shellcheck disable=SC1090
   set -a
+  # shellcheck disable=SC1090
   source "$ENV_FILE"
   set +a
 fi
@@ -62,60 +63,84 @@ fi
 mkdir -p "$LOG_DIR"
 
 log() {
-  local step="$1" status="$2" detail="$3"
   local ts
   ts="$(date '+%Y-%m-%dT%H:%M:%S')"
-  echo "$ts | $step | $status | $detail" | tee -a "$LOG_FILE"
+  echo "$ts | $1 | $2 | $3" | tee -a "$LOG_FILE"
 }
 
+# Парсинг JSON через node или python3
+# Usage: json_get <key.path> <<< "$json_body"
+json_get() {
+  local keypath="$1"
+  local body
+  body="$(cat)"
+  if [[ "$JSON_PARSER" == "node" ]]; then
+    echo "$body" | node -e "
+const chunks=[];
+process.stdin.on('data',c=>chunks.push(c));
+process.stdin.on('end',()=>{
+  try{
+    let d=JSON.parse(chunks.join(''));
+    '$keypath'.split('.').forEach(k=>{d=d&&d[k];});
+    console.log(d!=null?d:'');
+  }catch(e){console.log('');}
+});"
+  elif [[ "$JSON_PARSER" == "python3" ]]; then
+    echo "$body" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    for k in '$keypath'.split('.'):
+        d=d.get(k,{}) if isinstance(d,dict) else {}
+    print(d if d else '')
+except: print('')" 2>/dev/null
+  fi
+}
+
+# Создание Paperclip issue при FAIL
 fail_and_create_issue() {
   local summary="$1"
-  log "PAPERCLIP" "INFO" "Creating Paperclip issue: $summary"
+  log "PAPERCLIP" "INFO" "Creating issue: $summary"
 
   if [[ -z "${PAPERCLIP_API_KEY:-}" || -z "${PAPERCLIP_API_URL:-}" || -z "${PAPERCLIP_COMPANY_ID:-}" ]]; then
-    log "PAPERCLIP" "SKIP" "PAPERCLIP_API_KEY/URL/COMPANY_ID not set — issue creation skipped"
+    log "PAPERCLIP" "SKIP" "Credentials not set — skipping issue creation"
     return
   fi
 
   local body
-  body="$(jq -n \
-    --arg title "access-check FAIL: $summary" \
-    --arg desc "Автоматическая проверка доступов упала $DATE_TAG.\n\n**Ошибка:** $summary\n\nСм. лог: \`logs/access-check-$DATE_TAG.log\`" \
-    --arg assignee "$SYSADMIN_AGENT_ID" \
-    --arg companyId "$PAPERCLIP_COMPANY_ID" \
-    '{
-      title: $title,
-      description: $desc,
-      priority: "high",
-      status: "todo",
-      assigneeAgentId: $assignee,
-      labels: ["access-check-fail"]
-    }'
-  )"
+  if [[ "$JSON_PARSER" == "node" ]]; then
+    body="$(node -e "console.log(JSON.stringify({
+      title:'access-check FAIL: ${summary//\'/\\\'}',
+      description:'Auto check failed ${DATE_TAG}.\n\nError: ${summary//\'/\\\'}\n\nLog: logs/access-check-${DATE_TAG}.log',
+      priority:'high',
+      status:'todo',
+      assigneeAgentId:'${SYSADMIN_AGENT_ID}',
+      goalId:'02bd1612-63ff-4fd1-9faa-95ff028d2295'
+    }));")"
+  elif [[ "$JSON_PARSER" == "python3" ]]; then
+    body="$(python3 -c "import json; print(json.dumps({'title':'access-check FAIL: ${summary}','description':'Auto check failed ${DATE_TAG}. Error: ${summary}. Log: logs/access-check-${DATE_TAG}.log','priority':'high','status':'todo','assigneeAgentId':'${SYSADMIN_AGENT_ID}','goalId':'02bd1612-63ff-4fd1-9faa-95ff028d2295'}))" 2>/dev/null)"
+  else
+    # Минимальный fallback без JSON-парсера
+    body="{\"title\":\"access-check FAIL: ${summary//\"/\\\"}\",\"priority\":\"high\",\"status\":\"todo\",\"assigneeAgentId\":\"${SYSADMIN_AGENT_ID}\"}"
+  fi
 
-  local resp
-  resp="$(curl -s -w "\n%{http_code}" -X POST \
+  local http_code
+  http_code="$(curl -s -o /dev/null -w "%{http_code}" -X POST \
     -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+    -H "X-Paperclip-Run-Id: ${PAPERCLIP_RUN_ID:-access-check-cron}" \
     -H "Content-Type: application/json" \
     -d "$body" \
     "$PAPERCLIP_API_URL/api/companies/$PAPERCLIP_COMPANY_ID/issues")"
 
-  local http_code
-  http_code="$(echo "$resp" | tail -1)"
-  local resp_body
-  resp_body="$(echo "$resp" | head -n -1)"
-
   if [[ "$http_code" == "201" || "$http_code" == "200" ]]; then
-    local issue_id
-    issue_id="$(echo "$resp_body" | jq -r '.identifier // .id // "unknown"')"
-    log "PAPERCLIP" "OK" "Issue created: $issue_id"
+    log "PAPERCLIP" "OK" "Issue created (HTTP $http_code)"
   else
-    log "PAPERCLIP" "ERROR" "Failed to create issue: HTTP $http_code — $resp_body"
+    log "PAPERCLIP" "ERROR" "Failed: HTTP $http_code"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# 2. Трекинг результатов
+# 2. Трекинг
 # ---------------------------------------------------------------------------
 OVERALL_STATUS="OK"
 FAIL_DETAILS=()
@@ -143,26 +168,29 @@ fi
 log "YM" "INFO" "Checking Yandex.Metrika counter $YM_COUNTER_ID..."
 
 if [[ -z "${YM_TOKEN:-}" ]]; then
-  log "YM" "SKIP" "YM_TOKEN not set — skipping"
+  log "YM" "SKIP" "YM_TOKEN not set"
 else
-  YM_RESP="$(curl -s -w "\n%{http_code}" \
+  # Единственный запрос: тело + HTTP-код
+  YM_RAW="$(curl -s -w "\n__STATUS__%{http_code}" \
     -H "Authorization: OAuth $YM_TOKEN" \
     "https://api-metrika.yandex.net/management/v1/counter/$YM_COUNTER_ID")"
 
-  YM_HTTP="$(echo "$YM_RESP" | tail -1)"
-  YM_BODY="$(echo "$YM_RESP" | head -n -1)"
+  YM_HTTP="${YM_RAW##*__STATUS__}"
+  YM_BODY="${YM_RAW%__STATUS__*}"
 
   if [[ "$YM_HTTP" == "200" ]]; then
-    YM_STATUS="$(echo "$YM_BODY" | jq -r '.counter.status // empty')"
-    if [[ "$YM_STATUS" == "Active" ]]; then
+    # Используем bash string matching для надёжности
+    if [[ "$YM_BODY" == *'"status":"Active"'* ]]; then
       log "YM" "OK" "Counter $YM_COUNTER_ID is Active"
     else
+      # Попытка достать status через парсер
+      YM_STATUS="$(json_get "counter.status" <<< "$YM_BODY" 2>/dev/null || echo "unknown")"
       log "YM" "FAIL" "Counter status: '$YM_STATUS' (expected Active)"
-      mark_fail "Yandex.Metrika counter status='$YM_STATUS'"
+      mark_fail "Yandex.Metrika counter not Active (status='$YM_STATUS')"
     fi
   else
-    log "YM" "FAIL" "HTTP $YM_HTTP — $(echo "$YM_BODY" | head -c 200)"
-    mark_fail "Yandex.Metrika API returned HTTP $YM_HTTP"
+    log "YM" "FAIL" "HTTP $YM_HTTP — ${YM_BODY:0:200}"
+    mark_fail "Yandex.Metrika API HTTP $YM_HTTP"
   fi
 fi
 
@@ -172,61 +200,63 @@ fi
 log "GA4" "INFO" "Checking GA4 property $GA4_PROPERTY_ID..."
 
 if [[ -z "${GA4_CLIENT_ID:-}" || -z "${GA4_CLIENT_SECRET:-}" || -z "${GA4_REFRESH_TOKEN:-}" ]]; then
-  log "GA4" "SKIP" "GA4_CLIENT_ID/CLIENT_SECRET/REFRESH_TOKEN not set — skipping"
+  log "GA4" "SKIP" "GA4_CLIENT_ID/SECRET/REFRESH_TOKEN not set"
 else
-  # Получаем access token через refresh
-  TOKEN_RESP="$(curl -s -w "\n%{http_code}" -X POST \
+  # Refresh access token
+  TOKEN_RAW="$(curl -s -w "\n__STATUS__%{http_code}" -X POST \
     -d "client_id=$GA4_CLIENT_ID" \
     -d "client_secret=$GA4_CLIENT_SECRET" \
     -d "refresh_token=$GA4_REFRESH_TOKEN" \
     -d "grant_type=refresh_token" \
     "https://oauth2.googleapis.com/token")"
 
-  TOKEN_HTTP="$(echo "$TOKEN_RESP" | tail -1)"
-  TOKEN_BODY="$(echo "$TOKEN_RESP" | head -n -1)"
+  TOKEN_HTTP="${TOKEN_RAW##*__STATUS__}"
+  TOKEN_BODY="${TOKEN_RAW%__STATUS__*}"
 
   if [[ "$TOKEN_HTTP" != "200" ]]; then
-    log "GA4" "FAIL" "Token refresh failed: HTTP $TOKEN_HTTP — $(echo "$TOKEN_BODY" | head -c 200)"
-    mark_fail "GA4 token refresh failed (HTTP $TOKEN_HTTP)"
+    log "GA4" "FAIL" "Token refresh failed: HTTP $TOKEN_HTTP"
+    mark_fail "GA4 token refresh HTTP $TOKEN_HTTP"
   else
-    GA4_ACCESS_TOKEN="$(echo "$TOKEN_BODY" | jq -r '.access_token')"
+    GA4_ACCESS_TOKEN="$(json_get "access_token" <<< "$TOKEN_BODY" 2>/dev/null || echo "")"
 
-    if [[ -z "$GA4_ACCESS_TOKEN" || "$GA4_ACCESS_TOKEN" == "null" ]]; then
+    if [[ -z "$GA4_ACCESS_TOKEN" ]]; then
       log "GA4" "FAIL" "Empty access_token in refresh response"
-      mark_fail "GA4 access_token empty after refresh"
+      mark_fail "GA4 access_token empty"
     else
-      # Запрос activeUsers за вчера
-      YESTERDAY="$(date -d 'yesterday' '+%Y-%m-%d' 2>/dev/null || date -v-1d '+%Y-%m-%d')"
+      YESTERDAY="$(date -d 'yesterday' '+%Y-%m-%d' 2>/dev/null || \
+                   date -v-1d '+%Y-%m-%d' 2>/dev/null || \
+                   date '+%Y-%m-%d')"
 
-      REPORT_BODY="$(jq -n \
-        --arg start "$YESTERDAY" \
-        --arg end "$YESTERDAY" \
-        '{
-          dateRanges: [{startDate: $start, endDate: $end}],
-          metrics: [{name: "activeUsers"}]
-        }')"
+      # Build report request body
+      if [[ "$JSON_PARSER" == "node" ]]; then
+        REPORT_BODY="$(node -e "console.log(JSON.stringify({
+          dateRanges:[{startDate:'${YESTERDAY}',endDate:'${YESTERDAY}'}],
+          metrics:[{name:'activeUsers'}]
+        }));")"
+      else
+        REPORT_BODY="{\"dateRanges\":[{\"startDate\":\"${YESTERDAY}\",\"endDate\":\"${YESTERDAY}\"}],\"metrics\":[{\"name\":\"activeUsers\"}]}"
+      fi
 
-      REPORT_RESP="$(curl -s -w "\n%{http_code}" -X POST \
+      REPORT_RAW="$(curl -s -w "\n__STATUS__%{http_code}" -X POST \
         -H "Authorization: Bearer $GA4_ACCESS_TOKEN" \
         -H "Content-Type: application/json" \
         -d "$REPORT_BODY" \
         "https://analyticsdata.googleapis.com/v1beta/properties/$GA4_PROPERTY_ID:runReport")"
 
-      REPORT_HTTP="$(echo "$REPORT_RESP" | tail -1)"
-      REPORT_BODY_CONTENT="$(echo "$REPORT_RESP" | head -n -1)"
+      REPORT_HTTP="${REPORT_RAW##*__STATUS__}"
+      REPORT_BODY_CONTENT="${REPORT_RAW%__STATUS__*}"
 
       if [[ "$REPORT_HTTP" == "200" ]]; then
-        ROW_COUNT="$(echo "$REPORT_BODY_CONTENT" | jq -r '.rowCount // 0')"
-        if [[ "$ROW_COUNT" -gt 0 ]] 2>/dev/null; then
-          ACTIVE_USERS="$(echo "$REPORT_BODY_CONTENT" | jq -r '.rows[0].metricValues[0].value // "?"')"
-          log "GA4" "OK" "rowCount=$ROW_COUNT, activeUsers($YESTERDAY)=$ACTIVE_USERS"
+        ROW_COUNT="$(json_get "rowCount" <<< "$REPORT_BODY_CONTENT" 2>/dev/null || echo "0")"
+        if [[ "${ROW_COUNT:-0}" -gt 0 ]] 2>/dev/null; then
+          log "GA4" "OK" "rowCount=$ROW_COUNT for $YESTERDAY"
         else
-          log "GA4" "FAIL" "rowCount=$ROW_COUNT (no data for $YESTERDAY)"
-          mark_fail "GA4 runReport returned rowCount=$ROW_COUNT for $YESTERDAY"
+          log "GA4" "FAIL" "rowCount=${ROW_COUNT:-0} (no data for $YESTERDAY)"
+          mark_fail "GA4 rowCount=${ROW_COUNT:-0} for $YESTERDAY"
         fi
       else
-        log "GA4" "FAIL" "HTTP $REPORT_HTTP — $(echo "$REPORT_BODY_CONTENT" | head -c 200)"
-        mark_fail "GA4 runReport failed: HTTP $REPORT_HTTP"
+        log "GA4" "FAIL" "HTTP $REPORT_HTTP — ${REPORT_BODY_CONTENT:0:200}"
+        mark_fail "GA4 runReport HTTP $REPORT_HTTP"
       fi
     fi
   fi
@@ -235,7 +265,7 @@ fi
 # ---------------------------------------------------------------------------
 # Итог
 # ---------------------------------------------------------------------------
-log "SUMMARY" "$OVERALL_STATUS" "Checks complete. Fails: ${#FAIL_DETAILS[@]}"
+log "SUMMARY" "$OVERALL_STATUS" "Checks done. Fails: ${#FAIL_DETAILS[@]}"
 
 if [[ "$OVERALL_STATUS" == "FAIL" ]]; then
   for detail in "${FAIL_DETAILS[@]}"; do
