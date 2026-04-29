@@ -129,7 +129,7 @@ def build_cfg(secrets_dir: Path) -> dict:
         cfg["GOOGLE_REFRESH_TOKEN"] = cfg.get("GA4_REFRESH_TOKEN", "")
     # Алиасы IMAP (берём из SMTP если нет явного)
     if not cfg.get("IMAP_HOST"):
-        cfg["IMAP_HOST"] = "mail.beget.com"
+        cfg["IMAP_HOST"] = "imap.beget.com"
     if not cfg.get("IMAP_USER") and cfg.get("SMTP_USER"):
         cfg["IMAP_USER"] = cfg["SMTP_USER"]
     if not cfg.get("IMAP_PASS") and cfg.get("SMTP_PASS"):
