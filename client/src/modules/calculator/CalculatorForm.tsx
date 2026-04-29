@@ -139,7 +139,7 @@ export function CalculatorForm() {
   const [selectedRegion, setSelectedRegion] = useState(() => {
     const p = new URLSearchParams(window.location.search);
     const r = p.get("region");
-    return CALCULATOR_DATA.regions.find(reg => reg.name === r) ? r! : CALCULATOR_DATA.regions[0].name;
+    return CALCULATOR_DATA.regions.find(reg => reg.name === r) ? r! : "Москва";
   });
   const [selectedHazards, setSelectedHazards] = useState<string[]>([]);
   const [selectedTier, setSelectedTier] = useState<TierId>("standard");
