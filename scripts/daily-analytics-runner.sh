@@ -91,11 +91,14 @@ fi
 # 4. Запуск daily-analytics.py
 # ---------------------------------------------------------------------------
 log "ANALYTICS" "INFO" "Running $ANALYTICS_SCRIPT..."
-if python3 "$ANALYTICS_SCRIPT" >> "$LOG_FILE" 2>&1; then
+python3 "$ANALYTICS_SCRIPT" >> "$LOG_FILE" 2>&1
+ANALYTICS_EXIT=$?
+if [[ $ANALYTICS_EXIT -eq 0 ]]; then
   log "ANALYTICS" "OK" "Script completed successfully"
+elif [[ $ANALYTICS_EXIT -eq 2 ]]; then
+  log "ANALYTICS" "WARN" "Script completed with partial errors (exit 2) — continuing with git commit"
 else
-  ANALYTICS_EXIT=$?
-  log "ANALYTICS" "FAIL" "Script exited with code $ANALYTICS_EXIT"
+  log "ANALYTICS" "FAIL" "Script exited with code $ANALYTICS_EXIT — aborting"
   exit $ANALYTICS_EXIT
 fi
 
