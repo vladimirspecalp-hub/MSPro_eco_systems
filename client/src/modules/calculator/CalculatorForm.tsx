@@ -344,6 +344,8 @@ export function CalculatorForm() {
     return acc * (h ? h.value : 1.0);
   }, 1.0);
 
+  const isLargeObject = (calcResult?.surfaceArea ?? 0) >= 5000;
+
   const handleGetProposal = () => {
     if (!calcResult) return;
 
@@ -643,6 +645,21 @@ export function CalculatorForm() {
                     ±15%
                   </span>
                 </div>
+
+                {/* P1.2: Large object badge (≥5000 m²) */}
+                {isLargeObject && (
+                  <div
+                    className="flex items-start gap-2 rounded-md px-3 py-2.5 mb-3"
+                    style={{ background: 'rgba(180,120,0,0.13)', border: '1px solid rgba(180,120,0,0.38)' }}
+                  >
+                    <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: '#D4A017' }} />
+                    <p className="text-xs leading-relaxed" style={{ color: '#C4920D' }}>
+                      <span className="font-semibold">КП от инженера</span>
+                      {' '}— для объектов от 5 000 м² цифра ориентировочная.
+                      Точную стоимость определяет инженер при осмотре.
+                    </p>
+                  </div>
+                )}
 
                 {/* Compact breakdown */}
                 <p className="text-xs text-center text-gray-500 mb-4">
@@ -1047,7 +1064,7 @@ export function CalculatorForm() {
               style={{ background: '#820101', color: '#fff', border: 'none' }}
               onClick={handleGetProposal}
             >
-              Отправить заявку на эту смету
+              {isLargeObject ? "Запросить КП от инженера" : "Отправить заявку на эту смету"}
             </Button>
           )}
 
