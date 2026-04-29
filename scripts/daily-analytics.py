@@ -6,6 +6,7 @@ scripts/daily-analytics.py
 Этап 2 (MSP-52): Блок A (Я.Вебмастер) + Блок C (Я.Метрика).
 Этап 3 (MSP-53): Блок B (GSC) + Блок D (GA4).
 Этап 4 (MSP-54): Блок E (TG/IMAP заявки) + полный markdown render.
+Этап 6 (MSP-56): Алерт-логика (alerts.py) + Telegram-push (notifier.py).
 
 Запуск:
     python3 scripts/daily-analytics.py [--date YYYY-MM-DD] [--dry-run]
@@ -45,6 +46,23 @@ try:
 except ImportError:
     print("ERROR: requests not installed. Run: pip install requests", file=sys.stderr)
     sys.exit(1)
+
+# Алерт-модули (MSP-56 этап 6); импорт мягкий — не ломаем pipeline если отсутствуют
+try:
+    from scripts.alerts import evaluate_alerts, load_snapshot as alerts_load_snapshot
+    from scripts.notifier import send_alerts
+    _ALERTS_AVAILABLE = True
+except ImportError:
+    try:
+        # Fallback: если запускаем из корня repo без пакета
+        _scripts_dir = Path(__file__).resolve().parent
+        sys.path.insert(0, str(_scripts_dir.parent))
+        from scripts.alerts import evaluate_alerts, load_snapshot as alerts_load_snapshot
+        from scripts.notifier import send_alerts
+        _ALERTS_AVAILABLE = True
+    except ImportError:
+        _ALERTS_AVAILABLE = False
+        print("WARN: alerts.py / notifier.py not found — alert stage skipped", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
@@ -924,6 +942,42 @@ def run(date_str: str, dry_run: bool = False, secrets_dir: Path = None) -> dict:
         md_content = render_markdown(result, date_str)
         print("\n=== MARKDOWN PREVIEW ===\n")
         print(md_content[:3000])
+
+    # -----------------------------------------------------------------------
+    # Этап 6 (MSP-56): алерт-проверка + Telegram-push
+    # -----------------------------------------------------------------------
+    if _ALERTS_AVAILABLE:
+        try:
+            yesterday_str = (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+            yest_data = alerts_load_snapshot(yesterday_str) or {}
+
+            alerts = evaluate_alerts(result, yest_data, date_str)
+            result["alerts"] = [a.to_dict() for a in alerts]
+
+            if alerts:
+                print(
+                    f"[INFO] alerts: {len(alerts)} triggered: "
+                    + ", ".join(a.rule_id for a in alerts),
+                    file=sys.stderr,
+                )
+                notify_results = send_alerts(alerts, cfg, dry_run=dry_run)
+                result["alert_notifications"] = notify_results
+            else:
+                print("[INFO] alerts: none triggered — all clear", file=sys.stderr)
+                result["alerts"] = []
+                result["alert_notifications"] = []
+
+            # Сохранить alerts JSON рядом со снапшотом
+            if not dry_run:
+                _alert_dir = repo_dir / "_data" / "analytics"
+                _alert_dir.mkdir(parents=True, exist_ok=True)
+                alert_file = _alert_dir / f"{date_str}-alerts.json"
+                with open(alert_file, "w", encoding="utf-8") as f:
+                    json.dump(result["alerts"], f, ensure_ascii=False, indent=2)
+        except Exception as exc:
+            traceback.print_exc(file=sys.stderr)
+            result["alerts"] = []
+            print(f"ERROR: alert stage failed: {exc}", file=sys.stderr)
 
     return result
 
