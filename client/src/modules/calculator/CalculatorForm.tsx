@@ -131,8 +131,16 @@ function FloatingInput({
 export function CalculatorForm() {
   const [, setLocation] = useLocation();
 
-  const [selectedService, setSelectedService] = useState(SERVICE_TYPES[0].id);
-  const [selectedRegion, setSelectedRegion] = useState(CALCULATOR_DATA.regions[0].name);
+  const [selectedService, setSelectedService] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const s = p.get("service");
+    return SERVICE_TYPES.find(t => t.id === s) ? s! : SERVICE_TYPES[0].id;
+  });
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const r = p.get("region");
+    return CALCULATOR_DATA.regions.find(reg => reg.name === r) ? r! : CALCULATOR_DATA.regions[0].name;
+  });
   const [selectedHazards, setSelectedHazards] = useState<string[]>([]);
   const [selectedTier, setSelectedTier] = useState<TierId>("standard");
   const [openRegion, setOpenRegion] = useState(false);
