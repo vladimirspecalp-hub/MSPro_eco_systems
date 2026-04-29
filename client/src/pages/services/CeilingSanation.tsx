@@ -83,8 +83,8 @@ export default function CeilingSanation() {
             "url": "https://mspro-ltd.ru/services/ceiling-sanation",
             "image": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg",
             "author": { "@type": "Organization", "name": "MSPRO" },
-            "publisher": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru", "logo": { "@type": "ImageObject", "url": "https://mspro-ltd.ru/site-industrial-theme-v5.jpg" } },
-            "datePublished": "2024-01-01",
+            "publisher": { "@type": "Organization", "name": "MSPRO", "url": "https://mspro-ltd.ru", "logo": { "@type": "ImageObject", "url": "https://mspro-ltd.ru/assets/logo-live.jpg" } },
+            "datePublished": "2026-01-09",
             "dateModified": new Date().toISOString().split("T")[0]
         });
 

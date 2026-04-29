@@ -78,9 +78,9 @@ export default function ServicePage() {
         "@type": "Organization",
         "name": "MSPRO",
         "url": "https://mspro-ltd.ru",
-        "logo": { "@type": "ImageObject", "url": image },
+        "logo": { "@type": "ImageObject", "url": "https://mspro-ltd.ru/assets/logo-live.jpg" },
       },
-      "datePublished": "2024-01-01",
+      "datePublished": "2026-01-09",
       "dateModified": today,
     });
 
