@@ -1,0 +1,58 @@
+name: Deploy to beget on push to main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: 'Skip npm build (only git pull + restart)'
+        required: false
+        default: 'false'
+
+jobs:
+  deploy:
+    name: Deploy mspro-ltd.ru
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Setup SSH key
+        env:
+          BEGET_SSH_KEY: ${{ secrets.BEGET_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$BEGET_SSH_KEY" > ~/.ssh/mspro_beget_ed25519
+          chmod 600 ~/.ssh/mspro_beget_ed25519
+          cat >> ~/.ssh/config << 'EOF'
+          Host mspro-beget
+            HostName mspro.beget.tech
+            User mspro
+            IdentityFile ~/.ssh/mspro_beget_ed25519
+            StrictHostKeyChecking no
+            ConnectTimeout 30
+          EOF
+
+      - name: Verify SSH
+        run: ssh mspro-beget "echo 'SSH OK: $(hostname) / $(date)'"
+
+      - name: Git pull
+        run: |
+          ssh mspro-beget "cd ~/mspro.beget.tech && git pull origin main 2>&1"
+
+      - name: Build (npm run build)
+        if: ${{ github.event.inputs.skip_build != 'true' }}
+        run: |
+          ssh mspro-beget "cd ~/mspro.beget.tech && npm run build 2>&1 | tail -20"
+
+      - name: Restart Passenger
+        run: |
+          ssh mspro-beget "touch ~/mspro.beget.tech/tmp/restart.txt && echo 'Restart triggered'"
+
+      - name: Smoke test (verify 200 OK)
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' https://mspro-ltd.ru/)
+          echo "Site status: $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
