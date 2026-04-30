@@ -1,0 +1,55 @@
+name: Daily Analytics
+
+on:
+  schedule:
+    # 06:00 МСК = 03:00 UTC ежедневно
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (не коммитить результат)'
+        required: false
+        default: 'false'
+
+jobs:
+  run-analytics:
+    name: Run daily-analytics on beget
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Setup SSH key
+        env:
+          BEGET_SSH_KEY: ${{ secrets.BEGET_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$BEGET_SSH_KEY" > ~/.ssh/mspro_beget_ed25519
+          chmod 600 ~/.ssh/mspro_beget_ed25519
+          cat >> ~/.ssh/config << 'EOF'
+          Host mspro-beget
+            HostName mspro.beget.tech
+            User mspro
+            IdentityFile ~/.ssh/mspro_beget_ed25519
+            StrictHostKeyChecking no
+            ConnectTimeout 30
+          EOF
+
+      - name: Verify SSH connection
+        run: |
+          ssh mspro-beget "echo 'SSH OK: $(hostname) / $(date)'"
+
+      - name: Run daily-analytics-runner.sh on beget
+        run: |
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN — script not executed"
+            ssh mspro-beget "ls ~/mspro.beget.tech/scripts/daily-analytics-runner.sh && echo 'Script exists'"
+          else
+            ssh mspro-beget "bash ~/mspro.beget.tech/scripts/daily-analytics-runner.sh"
+          fi
+
+      - name: Show last log lines
+        if: always()
+        run: |
+          TODAY=$(date +%Y-%m-%d)
+          ssh mspro-beget "tail -30 ~/mspro.beget.tech/_logs/daily-analytics-${TODAY}.log 2>/dev/null || echo 'No log for today'"
