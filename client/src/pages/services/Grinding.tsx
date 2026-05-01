@@ -130,8 +130,7 @@ const faq = [
   },
   {
     question: "Чем шлифование металла отличается от механической очистки или пескоструйки?",
-    answer:
-      "Механическая очистка болгаркой и щёткой — удаление ржавчины до степени St 2–St 3. Шлифование — создание заданного профиля шероховатости под систему ЛКМ. Пескоструйная очистка достигает Sa 2.5–Sa 3 с выраженным профилем Ra 40–80 мкм. Шлифование даёт более мягкий профиль Ra 3.2–25 мкм. Выбор метода определяет производитель ЛКМ в техническом листе грунтовки.",
+    answer: null, // rendered inline with links
   },
   {
     question: "Какую зернистость абразива выбрать для шлифования металлоконструкций?",
@@ -260,7 +259,7 @@ export default function Grinding() {
             СРО (стройка) член №{CREDENTIALS.sroConstruction.memberNumber}
           </div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" data-testid="text-grinding-h1">
-            Шлифование металлоконструкций промышленными альпинистами без лесов
+            Шлифование металлоконструкций промышленными альпинистами
           </h1>
           <p className="mt-6 text-lg text-muted-foreground" data-testid="text-grinding-intro">
             Шлифование металла на высоте без строительных лесов — задача для промышленных альпинистов MS-PRO.
@@ -434,7 +433,24 @@ export default function Grinding() {
             {faq.map((item, index) => (
               <div key={index} className="border-b pb-6" data-testid={`faq-item-${index}`}>
                 <h3 className="font-semibold">{item.question}</h3>
-                <p className="mt-2 text-muted-foreground">{item.answer}</p>
+                <div className="mt-2 text-muted-foreground">
+                  {index === 1 ? (
+                    <p>
+                      <Link href="/services/mechanical-cleaning" className="text-primary underline underline-offset-2">
+                        Механическая очистка металла
+                      </Link>{" "}
+                      болгаркой и щёткой — удаление ржавчины до степени St 2–St 3. Шлифование — создание заданного
+                      профиля шероховатости под систему ЛКМ.{" "}
+                      <Link href="/services/sandblasting" className="text-primary underline underline-offset-2">
+                        Пескоструйная очистка
+                      </Link>{" "}
+                      достигает степени Sa 2.5–Sa 3 с выраженным профилем Ra 40–80 мкм. Шлифование даёт более мягкий
+                      профиль Ra 3.2–25 мкм. Выбор метода определяет производитель ЛКМ в техническом листе грунтовки.
+                    </p>
+                  ) : (
+                    <p>{item.answer}</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
