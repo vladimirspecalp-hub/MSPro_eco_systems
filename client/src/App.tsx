@@ -18,6 +18,7 @@ import FireproofingAtHeight from "@/pages/services/FireproofingAtHeight";
 import AnticorrosionAtHeight from "@/pages/services/AnticorrosionAtHeight";
 import CeilingSanation from "@/pages/services/CeilingSanation";
 import Demolition from "@/pages/services/Demolition";
+import ChimneyPainting from "@/pages/services/ChimneyPainting";
 import ServicePage from "@/pages/services/[slug]";
 import SEOPage from "@/pages/SEOPage";
 import News from "@/pages/News";
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/services/anticorrosion-at-height" component={AnticorrosionAtHeight} />
       <Route path="/services/ceiling-sanation" component={CeilingSanation} />
       <Route path="/services/demolition" component={Demolition} />
+      <Route path="/services/chimney-painting" component={ChimneyPainting} />
       <Route path="/news" component={News} />
       <Route path="/news/:slug" component={NewsArticle} />
       <Route path="/admin/news-distribution" component={NewsDistribution} />
