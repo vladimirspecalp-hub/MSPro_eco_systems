@@ -19,6 +19,7 @@ import AnticorrosionAtHeight from "@/pages/services/AnticorrosionAtHeight";
 import CeilingSanation from "@/pages/services/CeilingSanation";
 import Demolition from "@/pages/services/Demolition";
 import ChimneyPainting from "@/pages/services/ChimneyPainting";
+import FacadeCleaning from "@/pages/services/FacadeCleaning";
 import ServicePage from "@/pages/services/[slug]";
 import SEOPage from "@/pages/SEOPage";
 import News from "@/pages/News";
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/services/ceiling-sanation" component={CeilingSanation} />
       <Route path="/services/demolition" component={Demolition} />
       <Route path="/services/chimney-painting" component={ChimneyPainting} />
+      <Route path="/services/facade-cleaning" component={FacadeCleaning} />
       <Route path="/news" component={News} />
       <Route path="/news/:slug" component={NewsArticle} />
       <Route path="/admin/news-distribution" component={NewsDistribution} />
