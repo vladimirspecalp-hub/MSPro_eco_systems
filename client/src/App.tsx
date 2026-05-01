@@ -24,6 +24,7 @@ import Sandblasting from "@/pages/services/Sandblasting";
 import MechanicalCleaning from "@/pages/services/MechanicalCleaning";
 import Hydroblast from "@/pages/services/Hydroblast";
 import Dedusting from "@/pages/services/Dedusting";
+import Grinding from "@/pages/services/Grinding";
 import ServicePage from "@/pages/services/[slug]";
 import SEOPage from "@/pages/SEOPage";
 import News from "@/pages/News";
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/services/mechanical-cleaning" component={MechanicalCleaning} />
       <Route path="/services/hydroblast" component={Hydroblast} />
       <Route path="/services/dedusting" component={Dedusting} />
+      <Route path="/services/grinding" component={Grinding} />
       <Route path="/news" component={News} />
       <Route path="/news/:slug" component={NewsArticle} />
       <Route path="/admin/news-distribution" component={NewsDistribution} />
