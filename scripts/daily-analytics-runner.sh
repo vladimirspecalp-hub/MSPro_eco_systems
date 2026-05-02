@@ -123,7 +123,7 @@ fi
 
 # git pull перед commit (защита от race condition с ручными пушами)
 log "GIT" "INFO" "git pull --rebase..."
-if ! git pull --rebase origin main >> "$LOG_FILE" 2>&1; then
+if ! git pull --rebase --autostash origin main >> "$LOG_FILE" 2>&1; then
   log "GIT" "WARN" "git pull failed — attempting commit anyway"
 fi
 
