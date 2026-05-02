@@ -15,13 +15,16 @@ interface Article {
 }
 
 export default function KnowledgeArticle() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, category } = useParams<{ slug: string; category?: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`/api/knowledge/${slug}`)
+    const apiUrl = category
+      ? `/api/knowledge/articles/${category}/${slug}`
+      : `/api/knowledge/${slug}`;
+    fetch(apiUrl)
       .then((r) => {
         if (r.status === 404) {
           setNotFound(true);
@@ -36,7 +39,7 @@ export default function KnowledgeArticle() {
         }
       })
       .catch(() => setNotFound(true));
-  }, [slug]);
+  }, [slug, category]);
 
   if (notFound) {
     return (

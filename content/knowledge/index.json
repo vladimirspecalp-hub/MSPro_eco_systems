@@ -27,5 +27,15 @@
       "icon": "calculator"
     }
   ],
-  "articles": []
+  "articles": [
+    {
+      "slug": "how-to-choose-contractor",
+      "category": "guides",
+      "url": "/knowledge/articles/guides/how-to-choose-contractor",
+      "title": "Как выбрать подрядчика по антикоррозионной защите металлоконструкций",
+      "description": "Как выбрать подрядчика по АКЗ: 7 критериев. Допуски СРО, ISO 12944, ДФТ, договор. Чек-лист для выбора компании по АКЗ. Звоните: +7 (987) 909-29-38.",
+      "publishedAt": "2026-05-02",
+      "updatedAt": "2026-05-02"
+    }
+  ]
 }

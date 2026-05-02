@@ -64,8 +64,30 @@ router.get("/", async (_req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/knowledge/articles/:category/:slug
+ * Возвращает полную статью по category/slug (вложенная структура).
+ */
+router.get("/articles/:category/:slug", async (req: Request, res: Response) => {
+  const { category, slug } = req.params;
+  if (!/^[a-z0-9-]+$/.test(category) || !/^[a-z0-9-]+$/.test(slug)) {
+    return res.status(400).json({ error: "Invalid category or slug" });
+  }
+  try {
+    const articlePath = resolve(ARTICLES_DIR, category, `${slug}.json`);
+    const raw = await fs.readFile(articlePath, "utf-8");
+    res.json(JSON.parse(raw));
+  } catch (err: any) {
+    if (err.code === "ENOENT") {
+      return res.status(404).json({ error: "Article not found", category, slug });
+    }
+    console.error("[knowledge-api] article load error:", err);
+    res.status(500).json({ error: "Article load failed" });
+  }
+});
+
+/**
  * GET /api/knowledge/:slug
- * Возвращает полную статью по slug.
+ * Legacy flat slug — оставлен для обратной совместимости со старыми статьями.
  */
 router.get("/:slug", async (req: Request, res: Response) => {
   const { slug } = req.params;
