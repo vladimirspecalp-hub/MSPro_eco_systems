@@ -39,17 +39,17 @@ jobs:
 
       - name: Git pull
         run: |
-          ssh mspro-beget "cd ~/mspro.beget.tech && git pull origin main 2>&1"
+          ssh mspro-beget "cd ~/mspro.beget.tech && git pull --autostash origin main 2>&1"
 
       - name: Install dependencies
         if: ${{ github.event.inputs.skip_build != 'true' }}
         run: |
-          ssh mspro-beget "cd ~/mspro.beget.tech && npm install --legacy-peer-deps 2>&1 | tail -5"
+          ssh mspro-beget "bash -lc 'cd ~/mspro.beget.tech && npm install --legacy-peer-deps 2>&1 | tail -5'"
 
       - name: Build (npm run build)
         if: ${{ github.event.inputs.skip_build != 'true' }}
         run: |
-          ssh mspro-beget "cd ~/mspro.beget.tech && npm run build 2>&1 | tail -20"
+          ssh mspro-beget "bash -lc 'cd ~/mspro.beget.tech && npm run build 2>&1 | tail -20'"
 
       - name: Restart Passenger
         run: |
