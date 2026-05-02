@@ -14,6 +14,7 @@ interface KnowledgeCategory {
 interface KnowledgeArticleSummary {
   slug: string;
   category: string;
+  url?: string;
   title: string;
   description: string;
   publishedAt?: string;
@@ -92,7 +93,7 @@ export default function Knowledge() {
                     {articles.map((a) => (
                       <li key={a.slug}>
                         <Link
-                          href={`/knowledge/${a.slug}`}
+                          href={a.url || `/knowledge/${a.slug}`}
                           className="text-primary hover:underline flex items-center gap-2"
                         >
                           <FileText className="h-4 w-4 shrink-0" />

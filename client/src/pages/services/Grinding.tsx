@@ -131,6 +131,8 @@ const faq = [
   {
     question: "Чем шлифование металла отличается от механической очистки или пескоструйки?",
     answer: null, // rendered inline with links
+    schemaAnswer:
+      "Механическая очистка металла болгаркой и щёткой — удаление ржавчины до степени St 2–St 3. Шлифование — создание заданного профиля шероховатости под систему ЛКМ. Пескоструйная очистка достигает степени Sa 2.5–Sa 3 с выраженным профилем Ra 40–80 мкм. Шлифование даёт более мягкий профиль Ra 3.2–25 мкм. Выбор метода определяет производитель ЛКМ в техническом листе грунтовки.",
   },
   {
     question: "Какую зернистость абразива выбрать для шлифования металлоконструкций?",
@@ -210,7 +212,7 @@ export default function Grinding() {
       "mainEntity": faq.map((item) => ({
         "@type": "Question",
         "name": item.question,
-        "acceptedAnswer": { "@type": "Answer", "text": item.answer },
+        "acceptedAnswer": { "@type": "Answer", "text": item.schemaAnswer ?? item.answer },
       })),
     });
 
@@ -416,7 +418,7 @@ export default function Grinding() {
           <p className="mt-4 text-muted-foreground leading-relaxed">
             Все промышленные альпинисты MSPRO аттестованы по 5-му разряду. Работы ведутся по наряду-допуску
             и индивидуальному ППР на каждый объект — в соответствии с ГОСТ Р ИСО 22846 и СНиП 12-03-2001.
-            Страховочные системы — двойные (рабочая и страховочная линии). MSPRO — член СРО строительства.
+            Страховочные системы — двойные (рабочая и страховочная линии).
           </p>
           <p className="mt-3 text-muted-foreground leading-relaxed">
             MSPRO — член СРО строительства №{CREDENTIALS.sroConstruction.memberNumber}.

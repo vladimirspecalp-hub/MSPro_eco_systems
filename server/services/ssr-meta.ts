@@ -58,6 +58,7 @@ type PageType =
     | { type: 'company-team' }
     | { type: 'knowledge' }
     | { type: 'knowledge-article'; slug: string }
+    | { type: 'knowledge-article-nested'; category: string; slug: string }
     | { type: 'other'; path: string };
 
 // ─── Роутинг ────────────────────────────────────────────────────────────────
@@ -76,7 +77,12 @@ function resolvePageType(url: string): PageType {
     if (path === '/news') return { type: 'news' };
     if (path === '/knowledge') return { type: 'knowledge' };
 
-    const knowledgeMatch = path.match(/^\/knowledge\/(.+)$/);
+    const knowledgeNestedMatch = path.match(/^\/knowledge\/articles\/([a-z0-9-]+)\/([a-z0-9-]+)$/);
+    if (knowledgeNestedMatch) {
+        return { type: 'knowledge-article-nested', category: knowledgeNestedMatch[1], slug: knowledgeNestedMatch[2] };
+    }
+
+    const knowledgeMatch = path.match(/^\/knowledge\/([a-z0-9-]+)$/);
     if (knowledgeMatch) return { type: 'knowledge-article', slug: knowledgeMatch[1] };
 
     const newsMatch = path.match(/^\/news\/(.+)$/);
@@ -260,6 +266,65 @@ function buildHowToSchema(title: string, description: string): object {
                 text: 'Контроль толщины покрытия, составление акта выполненных работ. Гарантия до 20 лет.',
             },
         ],
+    };
+}
+
+interface KnowledgeArticleData {
+    slug: string;
+    category: string;
+    url: string;
+    title: string;
+    metaTitle?: string;
+    description: string;
+    publishedAt?: string;
+    updatedAt?: string;
+    bodyHtml: string;
+    faq?: Array<{ question: string; answer: string }>;
+}
+
+const KNOWLEDGE_CATEGORY_TITLES: Record<string, string> = {
+    guides: 'Гайды',
+    standards: 'Стандарты и нормы',
+    cases: 'Разборы объектов',
+    calculators: 'Расчёты и таблицы',
+};
+
+async function loadKnowledgeArticle(category: string, slug: string): Promise<KnowledgeArticleData | null> {
+    try {
+        const { promises: fs } = await import('fs');
+        const { resolve } = await import('path');
+        const articlePath = resolve(process.cwd(), 'content', 'knowledge', 'articles', category, `${slug}.json`);
+        const raw = await fs.readFile(articlePath, 'utf-8');
+        return JSON.parse(raw) as KnowledgeArticleData;
+    } catch {
+        return null;
+    }
+}
+
+function buildArticleSchema(article: KnowledgeArticleData, fullUrl: string): object {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        '@id': `${fullUrl}#article`,
+        headline: article.title,
+        description: article.description,
+        url: fullUrl,
+        datePublished: article.publishedAt,
+        dateModified: article.updatedAt || article.publishedAt,
+        author: {
+            '@type': 'Organization',
+            '@id': `${ORG.url}/#organization`,
+            name: ORG.name,
+        },
+        publisher: {
+            '@type': 'Organization',
+            '@id': `${ORG.url}/#organization`,
+        },
+        mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': fullUrl,
+        },
+        inLanguage: 'ru-RU',
     };
 }
 
@@ -519,6 +584,43 @@ async function resolvePageMeta(pageType: PageType, region?: GeoRegion): Promise<
                 schemas,
                 statusCode: 404,
             };
+        }
+
+        case 'knowledge-article-nested': {
+            const article = await loadKnowledgeArticle(pageType.category, pageType.slug);
+            const urlPath = `/knowledge/articles/${pageType.category}/${pageType.slug}`;
+            const fullUrl = `${ORG.url}${urlPath}`;
+
+            if (!article) {
+                schemas.push(buildBreadcrumbSchema([
+                    { name: 'Главная', url: ORG.url },
+                    { name: 'База знаний', url: `${ORG.url}/knowledge` },
+                ]));
+                return {
+                    title: 'Статья не найдена — База знаний MS-PRO',
+                    description: 'Запрашиваемая статья не найдена. Перейти в базу знаний.',
+                    schemas,
+                    statusCode: 404,
+                };
+            }
+
+            const title = article.metaTitle || `${article.title} — MS-PRO`;
+            const categoryName = KNOWLEDGE_CATEGORY_TITLES[article.category] || article.category;
+
+            schemas.push(buildBreadcrumbSchema([
+                { name: 'Главная', url: ORG.url },
+                { name: 'База знаний', url: `${ORG.url}/knowledge` },
+                { name: categoryName, url: `${ORG.url}/knowledge#${article.category}` },
+                { name: article.title, url: fullUrl },
+            ]));
+            schemas.push(buildArticleSchema(article, fullUrl));
+            schemas.push(buildWebPageSchema(urlPath, title, article.description, article.publishedAt, article.updatedAt, true));
+
+            if (article.faq && article.faq.length > 0) {
+                schemas.push(buildFAQPageSchema(article.faq));
+            }
+
+            return { title, description: article.description, schemas, statusCode: 200 };
         }
 
         case 'seo': {

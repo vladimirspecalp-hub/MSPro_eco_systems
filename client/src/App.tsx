@@ -69,6 +69,7 @@ function Router() {
       <Route path="/prices" component={PricesPage} />
       <Route path="/company/team" component={TeamPage} />
       <Route path="/knowledge" component={Knowledge} />
+      <Route path="/knowledge/articles/:category/:slug" component={KnowledgeArticle} />
       <Route path="/knowledge/:slug" component={KnowledgeArticle} />
       <Route path="/:slug" component={SEOPage} />
       <Route component={NotFound} />
