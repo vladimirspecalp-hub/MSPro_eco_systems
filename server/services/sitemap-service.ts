@@ -32,8 +32,14 @@ export async function generateSitemapXml(): Promise<string> {
         const raw = await fs.readFile(knowledgeIndexPath, "utf-8");
         const idx = JSON.parse(raw);
         if (Array.isArray(idx?.articles)) {
-            idx.articles.forEach((a: { slug: string }) => {
-                if (a?.slug) staticUrls.push(`/knowledge/${a.slug}`);
+            idx.articles.forEach((a: { slug: string; category?: string; url?: string }) => {
+                if (!a?.slug) return;
+                // Новые статьи имеют category — используем вложенный URL.
+                // Legacy статьи без category — отдаём через flat /knowledge/{slug}.
+                const url = a.url || (a.category
+                    ? `/knowledge/articles/${a.category}/${a.slug}`
+                    : `/knowledge/${a.slug}`);
+                staticUrls.push(url);
             });
         }
     } catch (e) {
